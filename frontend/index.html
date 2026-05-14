@@ -1,0 +1,130 @@
+<!DOCTYPE html>
+<html>
+
+<head>
+
+    <title>
+        Parallel Sorting Visualizer
+    </title>
+
+    <link
+        rel="stylesheet"
+        href="style.css"
+    >
+
+</head>
+
+<body>
+
+    <h1>
+        Parallel Sorting Visualizer
+    </h1>
+
+    <div class="controls">
+
+        <button onclick="generateArray()">
+            Generate Array
+        </button>
+
+        <button onclick="startSorting()">
+            Start Sorting
+        </button>
+
+        <select id="algorithm">
+
+            <option value="bubble">
+                Bubble Sort
+            </option>
+
+            <option value="merge">
+                Merge Sort
+            </option>
+
+            <option value="quick">
+                Quick Sort
+            </option>
+
+            <option value="shell">
+                Shell Sort
+            </option>
+
+        </select>
+
+        <input
+            type="range"
+            min="10"
+            max="60"
+            value="30"
+            id="sizeSlider"
+        >
+
+    </div>
+
+    <div class="section">
+
+        <h2>
+            Original Array
+        </h2>
+
+        <div
+            class="bars"
+            id="originalBars"
+        ></div>
+
+    </div>
+
+    <div class="container">
+
+        <div class="section">
+
+            <h2>
+                Serial Execution
+            </h2>
+
+            <div
+                class="bars"
+                id="serialBars"
+            ></div>
+
+            <p id="serialTime">
+                Time: 0 ms
+            </p>
+
+        </div>
+
+        <div class="section">
+
+            <h2>
+                Parallel Execution
+            </h2>
+
+            <div
+                class="bars"
+                id="parallelBars"
+            ></div>
+
+            <p id="parallelTime">
+                Time: 0 ms
+            </p>
+
+        </div>
+
+    </div>
+
+    <div class="performance">
+
+        <h2>
+            Performance Analysis
+        </h2>
+
+        <p id="speedup">
+            Speedup: 0x
+        </p>
+
+    </div>
+
+    <script src="script.js"></script>
+
+</body>
+
+</html>
