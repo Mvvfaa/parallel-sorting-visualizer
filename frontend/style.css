@@ -236,6 +236,249 @@ input[type="range"] {
 
 
 /* =====================================
+   SWAP DEMO SECTION
+===================================== */
+
+.swap-section {
+
+    margin-top: 30px;
+
+    background: #0f1d37;
+
+    border: 1px solid rgba(59, 130, 246, 0.28);
+
+    border-radius: 25px;
+
+    padding: 24px;
+
+    box-shadow:
+        0px 0px 20px rgba(0,0,0,0.45);
+}
+
+
+.swap-section h2 {
+
+    text-align: center;
+
+    color: cyan;
+
+    margin-bottom: 18px;
+}
+
+
+.swap-legend {
+
+    display: flex;
+
+    justify-content: center;
+
+    align-items: center;
+
+    gap: 24px;
+
+    flex-wrap: wrap;
+
+    margin-bottom: 20px;
+
+    padding: 14px;
+
+    background: rgba(30, 58, 138, 0.4);
+
+    border-radius: 12px;
+}
+
+
+.legend-item {
+
+    display: flex;
+
+    align-items: center;
+
+    gap: 8px;
+
+    font-size: 14px;
+
+    font-weight: 500;
+
+    letter-spacing: 0.3px;
+
+    color: #e0f2fe;
+}
+
+
+.legend-item.comparing {
+
+    color: #ffffff;
+}
+
+
+.legend-item.swapping {
+
+    color: #ffffff;
+}
+
+
+.legend-item.placing {
+
+    color: #ffffff;
+}
+
+
+.legend-item.sorted {
+
+    color: #ffffff;
+}
+
+
+.legend-box {
+
+    width: 18px;
+
+    height: 18px;
+
+    border-radius: 4px;
+
+    display: inline-block;
+}
+
+
+.legend-item.comparing .legend-box {
+
+    background: #fbbf24;
+}
+
+
+.legend-item.swapping .legend-box {
+
+    background: #f97316;
+}
+
+
+.legend-item.placing .legend-box {
+
+    background: #a78bfa;
+}
+
+
+.legend-item.sorted .legend-box {
+
+    background: #22c55e;
+}
+
+
+.swap-controls {
+
+    display: flex;
+
+    justify-content: center;
+
+    align-items: center;
+
+    gap: 14px;
+
+    flex-wrap: wrap;
+
+    margin-bottom: 20px;
+}
+
+
+#swapStatus {
+
+    margin: 0;
+
+    font-size: 16px;
+
+    color: #93c5fd;
+}
+
+
+.swap-boxes {
+
+    min-height: 110px;
+
+    display: flex;
+
+    justify-content: center;
+
+    align-items: center;
+
+    flex-wrap: wrap;
+
+    gap: 10px;
+}
+
+
+.swap-box {
+
+    width: 52px;
+
+    height: 52px;
+
+    border-radius: 14px;
+
+    display: flex;
+
+    justify-content: center;
+
+    align-items: center;
+
+    font-weight: bold;
+
+    font-size: 18px;
+
+    background: #1e3a8a;
+
+    color: #e0f2fe;
+
+    border: 1px solid rgba(125, 211, 252, 0.35);
+
+    transition: transform 0.22s ease, background 0.22s ease, box-shadow 0.22s ease;
+}
+
+
+.swap-box.comparing {
+
+    background: #fbbf24;
+
+    color: #1f2937;
+
+    box-shadow: 0 8px 16px rgba(251, 191, 36, 0.35);
+}
+
+
+.swap-box.swapping {
+
+    background: #f97316;
+
+    color: #ffffff;
+
+    transform: scale(1.08);
+
+    box-shadow: 0 8px 16px rgba(249, 115, 22, 0.45);
+}
+
+
+.swap-box.placing {
+
+    background: #a78bfa;
+
+    color: #ffffff;
+
+    box-shadow: 0 8px 16px rgba(167, 139, 250, 0.38);
+}
+
+
+.swap-box.sorted {
+
+    background: #22c55e;
+
+    color: #ffffff;
+
+    box-shadow: 0 8px 16px rgba(34, 197, 94, 0.35);
+}
+
+
+/* =====================================
    PERFORMANCE SECTION
 ===================================== */
 

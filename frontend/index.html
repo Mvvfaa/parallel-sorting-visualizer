@@ -175,8 +175,67 @@
 
     </div>
 
+    <div class="swap-section">
+
+        <h2>
+            Step-by-Step Array Visualization
+        </h2>
+
+        <div class="swap-legend">
+
+            <div class="legend-item comparing">
+                <span class="legend-box"></span>
+                Comparing
+            </div>
+
+            <div class="legend-item swapping">
+                <span class="legend-box"></span>
+                Swapping
+            </div>
+
+            <div class="legend-item placing">
+                <span class="legend-box"></span>
+                Placing
+            </div>
+
+            <div class="legend-item sorted">
+                <span class="legend-box"></span>
+                Sorted
+            </div>
+
+        </div>
+
+        <div class="swap-controls">
+
+            <button type="button" onclick="generateDemoArray()">
+                New Small Array
+            </button>
+
+            <button type="button" onclick="startSwapDemo()">
+                Play Steps
+            </button>
+
+            <button type="button" onclick="pauseResumeDemo()" id="pauseBtn" style="display:none;">
+                Pause
+            </button>
+
+            <button type="button" onclick="stepForward()" id="stepBtn" style="display:none;">
+                Next Step
+            </button>
+
+            <p id="swapStatus">
+                Status: Ready
+            </p>
+
+        </div>
+
+        <div class="swap-boxes" id="swapBoxes"></div>
+
+    </div>
+
     <script src="script.js"></script>
 
 </body>
 
 </html>
+
