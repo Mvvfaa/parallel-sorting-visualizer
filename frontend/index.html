@@ -50,13 +50,33 @@
 
         </select>
 
-        <input
-            type="range"
-            min="10"
-            max="60"
-            value="30"
-            id="sizeSlider"
-        >
+        <div class="size-control">
+
+            <label for="sizeSlider">
+                Size
+            </label>
+
+            <input
+                type="range"
+                min="10"
+                max="200"
+                value="30"
+                id="sizeSlider"
+            >
+
+            <span id="sizeValue">30</span>
+
+        </div>
+
+        <div class="size-presets">
+
+            <button type="button" onclick="setSize(30)">30</button>
+            <button type="button" onclick="setSize(60)">60</button>
+            <button type="button" onclick="setSize(100)">100</button>
+            <button type="button" onclick="setSize(150)">150</button>
+            <button type="button" onclick="setSize(200)">200</button>
+
+        </div>
 
     </div>
 

@@ -2,19 +2,33 @@ let size = 30;
 
 let originalArray = [];
 
+const sizeSlider = document.getElementById("sizeSlider");
+const sizeValue = document.getElementById("sizeValue");
+
 
 // ======================================
 // Slider
 // ======================================
 
 document
-.getElementById("sizeSlider")
+sizeSlider
 .addEventListener("input", function () {
 
     size = parseInt(this.value);
 
+    sizeValue.innerText = size;
+
     generateArray();
 });
+
+
+function setSize(newSize) {
+
+    size = newSize;
+    sizeSlider.value = newSize;
+    sizeValue.innerText = newSize;
+    generateArray();
+}
 
 
 // ======================================
@@ -63,12 +77,30 @@ function drawBars(array, containerId) {
 
     container.innerHTML = "";
 
+    const gap = array.length > 60 ? 1 : 2;
+    container.style.gap = `${gap}px`;
+
+    const availableWidth = container.clientWidth || 480;
+
+    const barWidth = Math.max(
+        2,
+        Math.min(
+            16,
+            Math.floor(
+                (availableWidth - ((array.length - 1) * gap)) /
+                Math.max(array.length, 1)
+            )
+        )
+    );
+
     array.forEach(value => {
 
         const bar =
             document.createElement("div");
 
         bar.classList.add("bar");
+
+        bar.style.width = `${barWidth}px`;
 
         bar.style.height =
             `${value}px`;

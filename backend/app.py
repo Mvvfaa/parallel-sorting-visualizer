@@ -1,7 +1,7 @@
 from flask import Flask, request, jsonify
 from flask_cors import CORS
 
-import threading
+from concurrent.futures import ProcessPoolExecutor
 import time
 
 app = Flask(__name__)
@@ -157,6 +157,15 @@ def get_sort_function(name):
     return bubble_sort
 
 
+def sort_chunk(args):
+    """Sort a chunk in a separate process."""
+    chunk, algorithm = args
+    chunk_copy = chunk.copy()
+    sort_function = get_sort_function(algorithm)
+    sort_function(chunk_copy)
+    return chunk_copy
+
+
 # =========================================
 # SERIAL SORT
 # =========================================
@@ -190,8 +199,30 @@ def serial_sort():
 
 
 # =========================================
+# PARALLEL MERGE FUNCTION
+# =========================================
+
+def merge_two_sorted(left, right):
+    result = []
+    i = j = 0
+    
+    while i < len(left) and j < len(right):
+        if left[i] <= right[j]:
+            result.append(left[i])
+            i += 1
+        else:
+            result.append(right[j])
+            j += 1
+    
+    result.extend(left[i:])
+    result.extend(right[j:])
+    return result
+
+
+# =========================================
 # PARALLEL SORT
 # =========================================
+
 
 @app.route("/parallel", methods=["POST"])
 def parallel_sort():
@@ -202,41 +233,39 @@ def parallel_sort():
 
     algorithm = data["algorithm"]
 
-    sort_function = get_sort_function(algorithm)
-
     arr_copy = arr.copy()
 
-    mid = len(arr_copy) // 2
+    # Small arrays are faster to sort serially because process startup overhead dominates.
+    if len(arr_copy) < 80:
+        start = time.time()
+        sort_function = get_sort_function(algorithm)
+        sort_function(arr_copy)
+        end = time.time()
 
-    left_half = arr_copy[:mid]
+        return jsonify({
+            "sorted_array": arr_copy,
+            "time": round((end - start) * 1000, 2)
+        })
 
-    right_half = arr_copy[mid:]
+    # Split into chunks and sort them in separate processes.
+    chunk_count = min(4, len(arr_copy))
+    chunk_size = (len(arr_copy) + chunk_count - 1) // chunk_count
+    chunks = [arr_copy[i:i + chunk_size] for i in range(0, len(arr_copy), chunk_size)]
 
     start = time.time()
 
-    t1 = threading.Thread(
-        target=sort_function,
-        args=(left_half,)
-    )
+    with ProcessPoolExecutor(max_workers=chunk_count) as executor:
+        sorted_chunks = list(executor.map(sort_chunk, [(chunk, algorithm) for chunk in chunks]))
 
-    t2 = threading.Thread(
-        target=sort_function,
-        args=(right_half,)
-    )
-
-    t1.start()
-    t2.start()
-
-    t1.join()
-    t2.join()
-
-    merged = sorted(left_half + right_half)
+    sorted_array = sorted_chunks[0]
+    for chunk in sorted_chunks[1:]:
+        sorted_array = merge_two_sorted(sorted_array, chunk)
 
     end = time.time()
 
     return jsonify({
 
-        "sorted_array": merged,
+        "sorted_array": sorted_array,
 
         "time":
             round((end - start) * 1000, 2)
@@ -248,5 +277,4 @@ def parallel_sort():
 # =========================================
 
 if __name__ == "__main__":
-
     app.run(debug=True)
