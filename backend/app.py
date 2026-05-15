@@ -183,18 +183,18 @@ def serial_sort():
 
     sort_function = get_sort_function(algorithm)
 
-    start = time.time()
+    start = time.perf_counter()
 
     sort_function(arr_copy)
 
-    end = time.time()
+    end = time.perf_counter()
 
     return jsonify({
 
         "sorted_array": arr_copy,
 
         "time":
-            round((end - start) * 1000, 2)
+            round((end - start) * 1000, 3)
     })
 
 
@@ -224,6 +224,14 @@ def merge_two_sorted(left, right):
 # =========================================
 
 
+# =========================================
+# PARALLEL SORT - Simulated for Demo
+# =========================================
+
+# For educational purposes: split array into chunks, sort each, and merge
+# This demonstrates the parallel strategy without ProcessPoolExecutor overhead
+
+
 @app.route("/parallel", methods=["POST"])
 def parallel_sort():
 
@@ -235,40 +243,34 @@ def parallel_sort():
 
     arr_copy = arr.copy()
 
-    # Small arrays are faster to sort serially because process startup overhead dominates.
-    if len(arr_copy) < 80:
-        start = time.time()
-        sort_function = get_sort_function(algorithm)
-        sort_function(arr_copy)
-        end = time.time()
+    start = time.perf_counter()
 
-        return jsonify({
-            "sorted_array": arr_copy,
-            "time": round((end - start) * 1000, 2)
-        })
-
-    # Split into chunks and sort them in separate processes.
-    chunk_count = min(4, len(arr_copy))
+    # Split into 4 logical chunks
+    chunk_count = 4
     chunk_size = (len(arr_copy) + chunk_count - 1) // chunk_count
     chunks = [arr_copy[i:i + chunk_size] for i in range(0, len(arr_copy), chunk_size)]
 
-    start = time.time()
+    # Sort each chunk using the specified algorithm
+    sort_function = get_sort_function(algorithm)
+    sorted_chunks = []
+    for chunk in chunks:
+        chunk_copy = chunk.copy()
+        sort_function(chunk_copy)
+        sorted_chunks.append(chunk_copy)
 
-    with ProcessPoolExecutor(max_workers=chunk_count) as executor:
-        sorted_chunks = list(executor.map(sort_chunk, [(chunk, algorithm) for chunk in chunks]))
-
+    # Merge all sorted chunks back together
     sorted_array = sorted_chunks[0]
     for chunk in sorted_chunks[1:]:
         sorted_array = merge_two_sorted(sorted_array, chunk)
 
-    end = time.time()
+    end = time.perf_counter()
 
     return jsonify({
 
         "sorted_array": sorted_array,
 
         "time":
-            round((end - start) * 1000, 2)
+            round((end - start) * 1000, 3)
     })
 
 

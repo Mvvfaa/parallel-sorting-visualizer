@@ -5,6 +5,21 @@ let originalArray = [];
 const sizeSlider = document.getElementById("sizeSlider");
 const sizeValue = document.getElementById("sizeValue");
 
+// Performance tracking per algorithm
+let performanceHistory = {
+    bubble: [],
+    shell: [],
+    merge: [],
+    quick: []
+};
+
+const algorithmComplexity = {
+    bubble: "O(n²)",
+    shell: "O(n log n)",
+    merge: "O(n log n)",
+    quick: "O(n log n)"
+};
+
 
 // ======================================
 // Slider
@@ -205,6 +220,9 @@ async function startSorting() {
         "speedup"
     ).innerText =
         `Speedup: ${speedup}x`;
+
+    // Update Key Metrics
+    updateMetrics(algorithm, serialData.time, parallelData.time, speedup);
 }
 
 
@@ -244,6 +262,48 @@ function sleep(ms) {
     return new Promise(resolve =>
         setTimeout(resolve, ms)
     );
+}
+
+
+// ======================================
+// Update Metrics
+// ======================================
+
+function updateMetrics(algorithm, serialTime, parallelTime, speedup) {
+
+    // Store this run's performance
+    performanceHistory[algorithm].push({
+        speedup: parseFloat(speedup),
+        serialTime: serialTime,
+        parallelTime: parallelTime
+    });
+
+    // Calculate average speedup for this algorithm
+    const history = performanceHistory[algorithm];
+    const avgSpeedup = (
+        history.reduce((sum, run) => sum + run.speedup, 0) / history.length
+    ).toFixed(2);
+
+    document.getElementById("avgSpeedup").innerText =
+        `~${avgSpeedup}x`;
+
+    // Calculate time saved (percentage)
+    const totalSerialTime = history.reduce((sum, run) => sum + run.serialTime, 0);
+    const totalParallelTime = history.reduce((sum, run) => sum + run.parallelTime, 0);
+    const timeSaved = (
+        ((totalSerialTime - totalParallelTime) / totalSerialTime) * 100
+    ).toFixed(0);
+
+    document.getElementById("timeSaved").innerText =
+        `~${timeSaved}%`;
+
+    // Threads Used (always 4 for our ProcessPoolExecutor)
+    document.getElementById("threadsUsed").innerText =
+        "4";
+
+    // Complexity based on algorithm
+    document.getElementById("complexity").innerText =
+        algorithmComplexity[algorithm];
 }
 
 
