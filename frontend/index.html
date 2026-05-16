@@ -1,241 +1,389 @@
 <!DOCTYPE html>
-<html>
-
+<html lang="en">
 <head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>Parallel Sorting Visualizer</title>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/tailwindcss/2.2.19/tailwind.min.js"></script>
+  <link href="https://fonts.googleapis.com/css2?family=Orbitron:wght@400;700;900&family=Share+Tech+Mono&display=swap" rel="stylesheet"/>
+  <style>
+    :root {
+      --cyan: #00f5ff;
+      --cyan-dim: #00b8c4;
+      --cyan-glow: rgba(0, 245, 255, 0.6);
+      --bg: #020a0a;
+    }
 
-    <title>
-        Parallel Sorting Visualizer
-    </title>
+    * { margin: 0; padding: 0; box-sizing: border-box; }
 
-    <link
-        rel="stylesheet"
-        href="style.css"
-    >
+    body {
+      background: var(--bg);
+      font-family: 'Orbitron', monospace;
+      overflow: hidden;
+      height: 100vh;
+      width: 100vw;
+    }
 
+    /* ── Grid background ── */
+    .grid-bg {
+      position: fixed; inset: 0;
+      background-image:
+        linear-gradient(rgba(0,245,255,0.04) 1px, transparent 1px),
+        linear-gradient(90deg, rgba(0,245,255,0.04) 1px, transparent 1px);
+      background-size: 50px 50px;
+      animation: gridShift 8s linear infinite;
+    }
+    @keyframes gridShift {
+      0%   { background-position: 0 0; }
+      100% { background-position: 50px 50px; }
+    }
+
+    /* ── Scanlines ── */
+    .scanlines {
+      position: fixed; inset: 0; pointer-events: none; z-index: 10;
+      background: repeating-linear-gradient(
+        0deg,
+        transparent,
+        transparent 2px,
+        rgba(0,0,0,0.15) 2px,
+        rgba(0,0,0,0.15) 4px
+      );
+    }
+
+    /* ── Corner decorations ── */
+    .corner {
+      position: fixed; width: 60px; height: 60px;
+      border-color: var(--cyan); border-style: solid;
+      opacity: 0; animation: fadeInCorner 0.5s ease 0.3s forwards;
+    }
+    .corner-tl { top: 20px; left: 20px; border-width: 2px 0 0 2px; }
+    .corner-tr { top: 20px; right: 20px; border-width: 2px 2px 0 0; }
+    .corner-bl { bottom: 20px; left: 20px; border-width: 0 0 2px 2px; }
+    .corner-br { bottom: 20px; right: 20px; border-width: 0 2px 2px 0; }
+    @keyframes fadeInCorner { to { opacity: 1; } }
+
+    /* ── Centre stage ── */
+    .stage {
+      position: relative; z-index: 5;
+      display: flex; flex-direction: column;
+      align-items: center; justify-content: center;
+      height: 100vh; gap: 40px;
+    }
+
+    /* ── Glitch title ── */
+    .title-wrap {
+      position: relative;
+      opacity: 0;
+      animation: titleReveal 0.8s cubic-bezier(0.23,1,0.32,1) 0.6s forwards;
+    }
+    @keyframes titleReveal {
+      0%   { opacity: 0; transform: translateY(-30px) scaleX(0.8); }
+      100% { opacity: 1; transform: translateY(0)    scaleX(1); }
+    }
+
+    .title {
+      font-size: clamp(2rem, 5vw, 4.2rem);
+      font-weight: 900;
+      letter-spacing: 0.12em;
+      color: var(--cyan);
+      text-shadow:
+        0 0 10px var(--cyan),
+        0 0 30px var(--cyan-glow),
+        0 0 80px rgba(0,245,255,0.3);
+      text-align: center;
+      line-height: 1.15;
+      animation: pulse 2.5s ease-in-out infinite;
+    }
+    @keyframes pulse {
+      0%, 100% { text-shadow: 0 0 10px var(--cyan), 0 0 30px var(--cyan-glow), 0 0 80px rgba(0,245,255,0.3); }
+      50%       { text-shadow: 0 0 20px var(--cyan), 0 0 60px var(--cyan-glow), 0 0 120px rgba(0,245,255,0.5); }
+    }
+
+    /* glitch layers */
+    .title::before, .title::after {
+      content: attr(data-text);
+      position: absolute; top: 0; left: 0; width: 100%;
+      color: var(--cyan);
+    }
+    .title::before {
+      clip-path: polygon(0 0, 100% 0, 100% 33%, 0 33%);
+      transform: translateX(-3px);
+      animation: glitch1 4s infinite;
+      opacity: 0.7;
+    }
+    .title::after {
+      clip-path: polygon(0 67%, 100% 67%, 100% 100%, 0 100%);
+      transform: translateX(3px);
+      animation: glitch2 4s infinite;
+      opacity: 0.7;
+    }
+    @keyframes glitch1 {
+      0%,90%,100% { transform: translateX(0); opacity: 0; }
+      92%  { transform: translateX(-5px); opacity: 0.7; }
+      94%  { transform: translateX(3px);  opacity: 0.7; }
+      96%  { transform: translateX(0);    opacity: 0; }
+    }
+    @keyframes glitch2 {
+      0%,90%,100% { transform: translateX(0); opacity: 0; }
+      93%  { transform: translateX(5px);  opacity: 0.7; }
+      95%  { transform: translateX(-3px); opacity: 0.7; }
+      97%  { transform: translateX(0);    opacity: 0; }
+    }
+
+    /* ── Subtitle ── */
+    .subtitle {
+      font-family: 'Share Tech Mono', monospace;
+      font-size: clamp(0.7rem, 1.5vw, 1rem);
+      color: var(--cyan-dim);
+      letter-spacing: 0.3em;
+      text-transform: uppercase;
+      opacity: 0;
+      animation: fadeUp 0.6s ease 1.2s forwards;
+    }
+    @keyframes fadeUp {
+      from { opacity: 0; transform: translateY(10px); }
+      to   { opacity: 1; transform: translateY(0); }
+    }
+
+    /* ── Progress bar wrapper ── */
+    .progress-area {
+      display: flex; flex-direction: column; align-items: center; gap: 14px;
+      opacity: 0;
+      animation: fadeUp 0.6s ease 1.4s forwards;
+    }
+
+    .progress-label {
+      font-family: 'Share Tech Mono', monospace;
+      font-size: 0.75rem;
+      color: var(--cyan-dim);
+      letter-spacing: 0.25em;
+    }
+
+    .progress-track {
+      width: clamp(260px, 40vw, 500px);
+      height: 4px;
+      background: rgba(0,245,255,0.12);
+      border: 1px solid rgba(0,245,255,0.25);
+      border-radius: 2px;
+      overflow: hidden;
+      position: relative;
+    }
+    .progress-fill {
+      height: 100%;
+      width: 0%;
+      background: linear-gradient(90deg, var(--cyan-dim), var(--cyan));
+      box-shadow: 0 0 12px var(--cyan);
+      border-radius: 2px;
+      transition: width 0.05s linear;
+    }
+    /* shimmer */
+    .progress-fill::after {
+      content: '';
+      position: absolute; top: 0; right: 0;
+      width: 40px; height: 100%;
+      background: linear-gradient(90deg, transparent, rgba(255,255,255,0.4), transparent);
+      animation: shimmer 0.8s linear infinite;
+    }
+    @keyframes shimmer {
+      0%   { transform: translateX(-40px); }
+      100% { transform: translateX(40px); }
+    }
+
+    /* ── Timer display ── */
+    .timer-ring-wrap {
+      position: relative;
+      opacity: 0;
+      animation: fadeUp 0.6s ease 1.6s forwards;
+    }
+    .timer-ring-wrap svg { display: block; }
+
+    .ring-track { fill: none; stroke: rgba(0,245,255,0.12); stroke-width: 3; }
+    .ring-fill  {
+      fill: none; stroke: var(--cyan); stroke-width: 3;
+      stroke-linecap: round;
+      stroke-dasharray: 188.5;
+      stroke-dashoffset: 0;
+      transition: stroke-dashoffset 0.05s linear;
+      filter: drop-shadow(0 0 6px var(--cyan));
+      transform-origin: center;
+      transform: rotate(-90deg);
+    }
+
+    .timer-num {
+      position: absolute; inset: 0;
+      display: flex; align-items: center; justify-content: center;
+      font-size: 1.6rem; font-weight: 900;
+      color: var(--cyan);
+      text-shadow: 0 0 12px var(--cyan);
+      font-family: 'Orbitron', monospace;
+    }
+
+    /* ── Bottom status line ── */
+    .status {
+      font-family: 'Share Tech Mono', monospace;
+      font-size: 0.7rem;
+      color: rgba(0,245,255,0.45);
+      letter-spacing: 0.2em;
+      opacity: 0;
+      animation: fadeUp 0.6s ease 1.8s forwards;
+    }
+    .blink { animation: blink 1s step-end infinite; }
+    @keyframes blink { 0%,100% { opacity: 1; } 50% { opacity: 0; } }
+
+    /* ── Particle dots ── */
+    .particle {
+      position: fixed;
+      width: 2px; height: 2px;
+      background: var(--cyan);
+      border-radius: 50%;
+      opacity: 0;
+      animation: floatParticle var(--dur) ease-in-out var(--delay) infinite;
+    }
+    @keyframes floatParticle {
+      0%   { opacity: 0; transform: translateY(0) scale(1); }
+      20%  { opacity: 0.8; }
+      80%  { opacity: 0.4; }
+      100% { opacity: 0; transform: translateY(-120px) scale(0.3); }
+    }
+
+    /* ── Flash-out ── */
+    .flash {
+      position: fixed; inset: 0; z-index: 100;
+      background: var(--cyan);
+      opacity: 0; pointer-events: none;
+    }
+    .flash.go {
+      animation: flashOut 0.5s ease-out forwards;
+    }
+    @keyframes flashOut {
+      0%   { opacity: 0.9; }
+      100% { opacity: 0; }
+    }
+  </style>
 </head>
-
 <body>
 
-    <h1>
-        Parallel Sorting Visualizer
-    </h1>
+  <!-- Background layers -->
+  <div class="grid-bg"></div>
+  <div class="scanlines"></div>
 
-    <div class="controls">
+  <!-- Corner decorations -->
+  <div class="corner corner-tl"></div>
+  <div class="corner corner-tr"></div>
+  <div class="corner corner-bl"></div>
+  <div class="corner corner-br"></div>
 
-        <button onclick="generateArray()">
-            Generate Array
-        </button>
+  <!-- Flash overlay -->
+  <div class="flash" id="flash"></div>
 
-        <button onclick="startSorting()">
-            Start Sorting
-        </button>
+  <!-- Particles (injected by JS) -->
+  <div id="particles"></div>
 
-        <select id="algorithm">
+  <!-- Main content -->
+  <div class="stage">
 
-            <option value="bubble">
-                Bubble Sort
-            </option>
-
-            <option value="merge">
-                Merge Sort
-            </option>
-
-            <option value="quick">
-                Quick Sort
-            </option>
-
-            <option value="shell">
-                Shell Sort
-            </option>
-
-        </select>
-
-        <div class="size-control">
-
-            <label for="sizeSlider">
-                Size
-            </label>
-
-            <input
-                type="range"
-                min="10"
-                max="200"
-                value="30"
-                id="sizeSlider"
-            >
-
-            <span id="sizeValue">30</span>
-
-        </div>
-
-        <div class="size-presets">
-
-            <button type="button" onclick="setSize(30)">30</button>
-            <button type="button" onclick="setSize(60)">60</button>
-            <button type="button" onclick="setSize(100)">100</button>
-            <button type="button" onclick="setSize(150)">150</button>
-            <button type="button" onclick="setSize(200)">200</button>
-
-        </div>
-
+    <!-- Title -->
+    <div class="title-wrap">
+      <h1 class="title" data-text="PARALLEL SORTING VISUALIZER">PARALLEL SORTING<br>VISUALIZER</h1>
     </div>
 
-    <div class="section">
+    <!-- Subtitle -->
+    <p class="subtitle">// Algorithm Visualization Engine //</p>
 
-        <h2>
-            Original Array
-        </h2>
-
-        <div
-            class="bars"
-            id="originalBars"
-        ></div>
-
+    <!-- Timer ring -->
+    <div class="timer-ring-wrap" id="ringWrap">
+      <svg width="72" height="72" viewBox="0 0 72 72">
+        <circle class="ring-track" cx="36" cy="36" r="30"/>
+        <circle class="ring-fill" id="ringFill" cx="36" cy="36" r="30"/>
+      </svg>
+      <div class="timer-num" id="timerNum">4</div>
     </div>
 
-    <div class="container">
-
-        <div class="section">
-
-            <h2>
-                Serial Execution
-            </h2>
-
-            <div
-                class="bars"
-                id="serialBars"
-            ></div>
-
-            <p id="serialTime">
-                Time: 0 ms
-            </p>
-
-        </div>
-
-        <div class="section">
-
-            <h2>
-                Parallel Execution
-            </h2>
-
-            <div
-                class="bars"
-                id="parallelBars"
-            ></div>
-
-            <p id="parallelTime">
-                Time: 0 ms
-            </p>
-
-        </div>
-
+    <!-- Progress bar -->
+    <div class="progress-area">
+      <span class="progress-label" id="progressLabel">INITIALIZING...</span>
+      <div class="progress-track">
+        <div class="progress-fill" id="progressFill"></div>
+      </div>
     </div>
 
-    <div class="performance">
+    <!-- Status -->
+    <p class="status">SYSTEM READY <span class="blink">_</span></p>
 
-        <h2>
-            Performance Analysis
-        </h2>
+  </div>
 
-        <p id="speedup">
-            Speedup: 0x
-        </p>
+  <script>
+    // ── Particles ──
+    const pContainer = document.getElementById('particles');
+    for (let i = 0; i < 40; i++) {
+      const p = document.createElement('div');
+      p.className = 'particle';
+      p.style.cssText = `
+        left: ${Math.random()*100}vw;
+        bottom: ${Math.random()*30}vh;
+        --dur: ${3 + Math.random()*4}s;
+        --delay: ${Math.random()*4}s;
+        width: ${1 + Math.random()*2}px;
+        height: ${1 + Math.random()*2}px;
+        opacity: ${0.3 + Math.random()*0.7};
+      `;
+      pContainer.appendChild(p);
+    }
 
-    </div>
+    // ── Timer + Progress ──
+    const DURATION   = 4000;          // ms  (change to 3000 for 3 s)
+    const FPS        = 30;
+    const INTERVAL   = 1000 / FPS;
+    const CIRCUMF    = 2 * Math.PI * 30;   // ~188.5 px
 
-    <div class="key-metrics">
+    const ringFill    = document.getElementById('ringFill');
+    const timerNum    = document.getElementById('timerNum');
+    const progressFill= document.getElementById('progressFill');
+    const progressLbl = document.getElementById('progressLabel');
+    const flash       = document.getElementById('flash');
 
-        <h2>
-            Key Metrics
-        </h2>
+    const LABELS = [
+      'INITIALIZING...',
+      'LOADING ALGORITHMS...',
+      'SPAWNING THREADS...',
+      'READY TO LAUNCH...',
+    ];
 
-        <div class="metrics-grid">
+    const startTime = performance.now();
+    let last = 0;
 
-            <div class="metric-card speedup-card">
-                <div class="metric-value" id="avgSpeedup">~2.5x</div>
-                <div class="metric-label">Average Speedup</div>
-            </div>
+    function tick(now) {
+      const elapsed  = now - startTime;
+      const progress = Math.min(elapsed / DURATION, 1);
 
-            <div class="metric-card time-saved-card">
-                <div class="metric-value" id="timeSaved">~60%</div>
-                <div class="metric-label">Time Saved (100k)</div>
-            </div>
+      // Ring: stroke-dashoffset counts DOWN from CIRCUMF → 0
+      ringFill.style.strokeDashoffset = CIRCUMF * (1 - progress);
 
-            <div class="metric-card threads-card">
-                <div class="metric-value" id="threadsUsed">4</div>
-                <div class="metric-label">Threads Used</div>
-            </div>
+      // Countdown number
+      const secsLeft = Math.ceil((DURATION - elapsed) / 1000);
+      timerNum.textContent = Math.max(secsLeft, 0);
 
-            <div class="metric-card complexity-card">
-                <div class="metric-value" id="complexity">O(n log n)</div>
-                <div class="metric-label">Both Algorithms</div>
-            </div>
+      // Progress bar
+      progressFill.style.width = (progress * 100) + '%';
 
-        </div>
+      // Status labels
+      const idx = Math.min(Math.floor(progress * LABELS.length), LABELS.length - 1);
+      progressLbl.textContent = LABELS[idx];
 
-    </div>
+      if (progress < 1) {
+        requestAnimationFrame(tick);
+      } else {
+        // Done — flash and redirect
+        timerNum.textContent = '0';
+        progressFill.style.width = '100%';
+        progressLbl.textContent = 'LAUNCHING...';
+        flash.classList.add('go');
+        setTimeout(() => { window.location.href = ' Homepage.html'; }, 500);
+      }
+    }
 
-    <div class="swap-section">
-
-        <h2>
-            Step-by-Step Array Visualization
-        </h2>
-
-        <div class="swap-legend">
-
-            <div class="legend-item comparing">
-                <span class="legend-box"></span>
-                Comparing
-            </div>
-
-            <div class="legend-item swapping">
-                <span class="legend-box"></span>
-                Swapping
-            </div>
-
-            <div class="legend-item placing">
-                <span class="legend-box"></span>
-                Placing
-            </div>
-
-            <div class="legend-item sorted">
-                <span class="legend-box"></span>
-                Sorted
-            </div>
-
-        </div>
-
-        <div class="swap-controls">
-
-            <button type="button" onclick="generateDemoArray()">
-                New Small Array
-            </button>
-
-            <button type="button" onclick="startSwapDemo()">
-                Play Steps
-            </button>
-
-            <button type="button" onclick="pauseResumeDemo()" id="pauseBtn" style="display:none;">
-                Pause
-            </button>
-
-            <button type="button" onclick="stepForward()" id="stepBtn" style="display:none;">
-                Next Step
-            </button>
-
-            <p id="swapStatus">
-                Status: Ready
-            </p>
-
-        </div>
-
-        <div class="swap-boxes" id="swapBoxes"></div>
-
-    </div>
-
-    <script src="script.js"></script>
-
+    // Start after initial animations settle (~1.8 s)
+    setTimeout(() => requestAnimationFrame(tick), 1800);
+  </script>
 </body>
-
 </html>
-

@@ -1,7 +1,7 @@
 from flask import Flask, request, jsonify
 from flask_cors import CORS
 
-from concurrent.futures import ProcessPoolExecutor
+import threading
 import time
 
 app = Flask(__name__)
@@ -157,15 +157,6 @@ def get_sort_function(name):
     return bubble_sort
 
 
-def sort_chunk(args):
-    """Sort a chunk in a separate process."""
-    chunk, algorithm = args
-    chunk_copy = chunk.copy()
-    sort_function = get_sort_function(algorithm)
-    sort_function(chunk_copy)
-    return chunk_copy
-
-
 # =========================================
 # SERIAL SORT
 # =========================================
@@ -199,38 +190,54 @@ def serial_sort():
 
 
 # =========================================
-# PARALLEL MERGE FUNCTION
+# MERGE TWO SORTED ARRAYS
 # =========================================
 
 def merge_two_sorted(left, right):
+
     result = []
+
     i = j = 0
-    
+
     while i < len(left) and j < len(right):
+
         if left[i] <= right[j]:
+
             result.append(left[i])
+
             i += 1
+
         else:
+
             result.append(right[j])
+
             j += 1
-    
+
     result.extend(left[i:])
+
     result.extend(right[j:])
+
     return result
 
 
 # =========================================
-# PARALLEL SORT
+# THREAD FUNCTION
 # =========================================
 
+def threaded_sort(chunk, algorithm, index, results):
+
+    sort_function = get_sort_function(algorithm)
+
+    chunk_copy = chunk.copy()
+
+    sort_function(chunk_copy)
+
+    results[index] = chunk_copy
+
 
 # =========================================
-# PARALLEL SORT - Simulated for Demo
+# PARALLEL SORT USING THREADING
 # =========================================
-
-# For educational purposes: split array into chunks, sort each, and merge
-# This demonstrates the parallel strategy without ProcessPoolExecutor overhead
-
 
 @app.route("/parallel", methods=["POST"])
 def parallel_sort():
@@ -245,22 +252,47 @@ def parallel_sort():
 
     start = time.perf_counter()
 
-    # Split into 4 logical chunks
+    # Split into 4 chunks
     chunk_count = 4
+
     chunk_size = (len(arr_copy) + chunk_count - 1) // chunk_count
-    chunks = [arr_copy[i:i + chunk_size] for i in range(0, len(arr_copy), chunk_size)]
 
-    # Sort each chunk using the specified algorithm
-    sort_function = get_sort_function(algorithm)
-    sorted_chunks = []
-    for chunk in chunks:
-        chunk_copy = chunk.copy()
-        sort_function(chunk_copy)
-        sorted_chunks.append(chunk_copy)
+    chunks = [
 
-    # Merge all sorted chunks back together
-    sorted_array = sorted_chunks[0]
-    for chunk in sorted_chunks[1:]:
+        arr_copy[i:i + chunk_size]
+
+        for i in range(0, len(arr_copy), chunk_size)
+    ]
+
+    # Store sorted chunks
+    results = [None] * len(chunks)
+
+    threads = []
+
+    # Create threads
+    for index, chunk in enumerate(chunks):
+
+        thread = threading.Thread(
+
+            target=threaded_sort,
+
+            args=(chunk, algorithm, index, results)
+        )
+
+        threads.append(thread)
+
+        thread.start()
+
+    # Wait for all threads
+    for thread in threads:
+
+        thread.join()
+
+    # Merge sorted chunks
+    sorted_array = results[0]
+
+    for chunk in results[1:]:
+
         sorted_array = merge_two_sorted(sorted_array, chunk)
 
     end = time.perf_counter()
@@ -279,4 +311,5 @@ def parallel_sort():
 # =========================================
 
 if __name__ == "__main__":
+
     app.run(debug=True)

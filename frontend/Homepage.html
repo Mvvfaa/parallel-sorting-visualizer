@@ -1,0 +1,239 @@
+<!DOCTYPE html>
+<html>
+
+<head>
+
+    <title>
+        Parallel Sorting Visualizer
+    </title>
+
+    <link
+        rel="stylesheet"
+        href="style.css"
+    >
+
+</head>
+
+<body>
+
+    <h1>
+        Parallel Sorting Visualizer
+    </h1>
+
+    <div class="controls">
+
+        <button onclick="generateArray()">
+            Generate Array
+        </button>
+
+        <button onclick="startSorting()">
+            Start Sorting
+        </button>
+
+        <select id="algorithm">
+
+            <option value="bubble">
+                Bubble Sort
+            </option>
+
+            <option value="merge">
+                Merge Sort
+            </option>
+
+            <option value="quick">
+                Quick Sort
+            </option>
+
+            <option value="shell">
+                Shell Sort
+            </option>
+
+        </select>
+
+        <div class="size-control">
+
+            <label for="sizeSlider">
+                Size
+            </label>
+
+            <input
+                type="range"
+                min="10"
+                max="200"
+                value="30"
+                id="sizeSlider"
+            >
+
+            <span id="sizeValue">30</span>
+
+        </div>
+
+        <div class="size-presets">
+
+            <button type="button" onclick="setSize(30)">30</button>
+            <button type="button" onclick="setSize(60)">60</button>
+            <button type="button" onclick="setSize(100)">100</button>
+            <button type="button" onclick="setSize(150)">150</button>
+            <button type="button" onclick="setSize(200)">200</button>
+
+        </div>
+
+    </div>
+
+    <div class="section">
+
+        <h2>
+            Original Array
+        </h2>
+
+        <div
+            class="bars"
+            id="originalBars"
+        ></div>
+
+    </div>
+
+    <div class="container">
+
+        <div class="section">
+
+            <h2>
+                Parallel Execution
+            </h2>
+
+            <div
+                class="bars"
+                id="serialBars"
+            ></div>
+
+            <p id="serialTime">
+                Time: 0 ms
+            </p>
+
+        </div>
+
+        <div class="section">
+
+            <h2>
+                Serial Execution
+            </h2>
+
+            <div
+                class="bars"
+                id="parallelBars"
+            ></div>
+
+            <p id="parallelTime">
+                Time: 0 ms
+            </p>
+
+        </div>
+
+    </div>
+
+    <div class="performance">
+
+        <h2>
+            Performance Analysis
+        </h2>
+
+        
+
+    </div>
+
+    <div class="key-metrics">
+
+        <h2>
+            Key Metrics
+        </h2>
+
+        <div class="metrics-grid">
+
+            <div class="metric-card speedup-card">
+                <div class="metric-value" id="avgSpeedup">~2.5x</div>
+                <div class="metric-label">Average Speedup</div>
+            </div>
+
+            <div class="metric-card time-saved-card">
+                <div class="metric-value" id="timeSaved">~60%</div>
+                <div class="metric-label">Time Saved (100k)</div>
+            </div>
+
+            <div class="metric-card threads-card">
+                <div class="metric-value" id="threadsUsed">4</div>
+                <div class="metric-label">Threads Used</div>
+            </div>
+
+            <div class="metric-card complexity-card">
+                <div class="metric-value" id="complexity">O(n log n)</div>
+                <div class="metric-label">Both Algorithms</div>
+            </div>
+
+        </div>
+
+    </div>
+
+    <div class="swap-section">
+
+        <h2>
+            Step-by-Step Array Visualization
+        </h2>
+
+        <div class="swap-legend">
+
+            <div class="legend-item comparing">
+                <span class="legend-box"></span>
+                Comparing
+            </div>
+
+            <div class="legend-item swapping">
+                <span class="legend-box"></span>
+                Swapping
+            </div>
+
+            <div class="legend-item placing">
+                <span class="legend-box"></span>
+                Placing
+            </div>
+
+            <div class="legend-item sorted">
+                <span class="legend-box"></span>
+                Sorted
+            </div>
+
+        </div>
+
+        <div class="swap-controls">
+
+            <button type="button" onclick="generateDemoArray()">
+                New Small Array
+            </button>
+
+            <button type="button" onclick="startSwapDemo()">
+                Play Steps
+            </button>
+
+            <button type="button" onclick="pauseResumeDemo()" id="pauseBtn" style="display:none;">
+                Pause
+            </button>
+
+            <button type="button" onclick="stepForward()" id="stepBtn" style="display:none;">
+                Next Step
+            </button>
+
+            <p id="swapStatus">
+                Status: Ready
+            </p>
+
+        </div>
+
+        <div class="swap-boxes" id="swapBoxes"></div>
+
+    </div>
+
+    <script src="script.js"></script>
+
+</body>
+
+</html>
+
