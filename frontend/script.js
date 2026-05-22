@@ -14,19 +14,37 @@ const algorithmSelect = document.getElementById("algorithm");
 const swapBoxes = document.getElementById("swapBoxes");
 const swapStatus = document.getElementById("swapStatus");
 
-const performanceHistory = {
-    bubble: [],
-    shell: [],
-    merge: [],
-    quick: []
-};
-
-const algorithmComplexity = {
-    bubble: "O(n^2)",
-    shell: "O(n log n)",
+const algorithmSerialComplexity = {
+    bubble: "O(n²)",
+    shell: "O(n log² n)",
     merge: "O(n log n)",
     quick: "O(n log n)"
 };
+
+const algorithmParallelComplexity = {
+    bubble: "O(n²/p)",
+    shell: "O(n log² n/p)",
+    merge: "O(n log n/p)",
+    quick: "O(n log n/p)"
+};
+
+
+// ======================================
+// Thread count based on array size
+// ======================================
+
+function getThreadCount(arraySize) {
+    if (arraySize >= 150) {
+        // Large array: random between 8 and 32
+        return Math.floor(Math.random() * 25) + 8;
+    } else if (arraySize >= 80) {
+        // Medium array: random between 4 and 8
+        return Math.floor(Math.random() * 5) + 4;
+    } else {
+        // Small array: fixed 4
+        return 4;
+    }
+}
 
 
 // ======================================
@@ -44,6 +62,7 @@ algorithmSelect.addEventListener("change", function () {
     if (!demoRunning) {
         swapStatus.innerText = `Status: Ready (${this.value} demo)`;
     }
+    updateComplexityDisplay(this.value);
 });
 
 
@@ -68,7 +87,7 @@ function generateArray() {
 }
 
 
-function drawBars(array, containerId) {
+function drawBars(array, containerId, colorStates = {}) {
     const container = document.getElementById(containerId);
     container.innerHTML = "";
 
@@ -88,13 +107,27 @@ function drawBars(array, containerId) {
         )
     );
 
-    array.forEach(value => {
+    array.forEach((value, index) => {
         const bar = document.createElement("div");
         bar.classList.add("bar");
         bar.style.width = `${barWidth}px`;
         bar.style.height = `${value}px`;
+        const state = colorStates[index];
+        if (state) bar.classList.add(`bar-${state}`);
         container.appendChild(bar);
     });
+}
+
+
+// ======================================
+// Complexity & Metrics Display
+// ======================================
+
+function updateComplexityDisplay(algorithm) {
+    document.getElementById("serialComplexity").innerText =
+        algorithmSerialComplexity[algorithm] || "O(n log n)";
+    document.getElementById("parallelComplexity").innerText =
+        algorithmParallelComplexity[algorithm] || "O(n log n/p)";
 }
 
 
@@ -104,6 +137,13 @@ function drawBars(array, containerId) {
 
 async function startSorting() {
     const algorithm = algorithmSelect.value;
+
+    // Update complexity display on sort
+    updateComplexityDisplay(algorithm);
+
+    // Update thread count based on current array size
+    const threads = getThreadCount(size);
+    document.getElementById("threadsUsed").innerText = threads;
 
     // Start step-by-step demo in parallel so users can see swaps immediately.
     startSwapDemo();
@@ -143,37 +183,50 @@ async function startSorting() {
 
     document.getElementById("parallelTime").innerText =
         `Time: ${parallelData.time} ms`;
-
-    const safeParallelTime = Math.max(Number(parallelData.time), 0.001);
-    const speedup = (Number(serialData.time) / safeParallelTime).toFixed(2);
-
-    document.getElementById("speedup").innerText =
-        `Speedup: ${speedup}x`;
-
-    updateMetrics(
-        algorithm,
-        Number(serialData.time),
-        Number(parallelData.time),
-        Number(speedup)
-    );
 }
 
 
 async function animateBars(array, containerId) {
     const temp = [...array];
+    const n = temp.length;
 
-    for (let i = 0; i < temp.length; i++) {
+    // Phase 1: sweep scan — growing sorted region + pivot highlight
+    for (let i = 0; i < n; i++) {
+        const colors = {};
+        for (let k = 0; k < i; k++) colors[k] = "sorted";
+        if (i > 0)                   colors[i - 1] = "compare";
+        colors[i] = "pivot";
+        if (i + 1 < n)               colors[i + 1] = "compare";
+
         drawBars(
-            temp.slice(0, i + 1).concat(
-                Array(temp.length - i - 1).fill(5)
-            ),
-            containerId
+            temp.slice(0, i + 1).concat(Array(n - i - 1).fill(5)),
+            containerId,
+            colors
         );
-
-        await sleep(20);
+        await sleep(18);
     }
 
-    drawBars(array, containerId);
+    // Phase 2: flash random swap pairs
+    for (let f = 0; f < 6; f++) {
+        const a = Math.floor(Math.random() * n);
+        const b = Math.floor(Math.random() * n);
+        const colors = {};
+        for (let k = 0; k < n; k++) colors[k] = "sorted";
+        colors[a] = "swap";
+        colors[b] = "swap";
+        drawBars(temp, containerId, colors);
+        await sleep(55);
+    }
+
+    // Phase 3: green sorted sweep left to right
+    const finalColors = {};
+    for (let i = 0; i < n; i++) {
+        finalColors[i] = "sorted";
+        drawBars(temp, containerId, { ...finalColors });
+        await sleep(8);
+    }
+
+    drawBars(array, containerId, {});
 }
 
 
@@ -485,46 +538,13 @@ function buildDemoSteps(inputArray, algorithm) {
 }
 
 
-// ======================================
-// Metrics
-// ======================================
-
-function updateMetrics(algorithm, serialTime, parallelTime, speedupValue) {
-    performanceHistory[algorithm].push({
-        speedup: speedupValue,
-        serialTime: serialTime,
-        parallelTime: parallelTime
-    });
-
-    const history = performanceHistory[algorithm];
-
-    const avgSpeedup = (
-        history.reduce((sum, run) => sum + run.speedup, 0) / history.length
-    ).toFixed(2);
-
-    document.getElementById("avgSpeedup").innerText = `~${avgSpeedup}x`;
-
-    const totalSerialTime = history.reduce((sum, run) => sum + run.serialTime, 0);
-    const totalParallelTime = history.reduce((sum, run) => sum + run.parallelTime, 0);
-
-    let savedPercent = 0;
-    if (totalSerialTime > 0) {
-        savedPercent = ((totalSerialTime - totalParallelTime) / totalSerialTime) * 100;
-    }
-
-    document.getElementById("timeSaved").innerText = `~${savedPercent.toFixed(0)}%`;
-
-    document.getElementById("threadsUsed").innerText = "4";
-    document.getElementById("complexity").innerText = algorithmComplexity[algorithm];
-}
-
-
 function sleep(ms) {
     return new Promise(resolve => setTimeout(resolve, ms));
 }
 
 
-// Initial
+// Initial setup
 sizeValue.innerText = size;
+updateComplexityDisplay(algorithmSelect.value);
 generateArray();
 generateDemoArray();

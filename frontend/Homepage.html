@@ -12,6 +12,50 @@
         href="style.css"
     >
 
+    <style>
+        .serial-complexity-card {
+            background: linear-gradient(135deg, #1a1a2e 0%, #16213e 60%, #0f3460 100%);
+            border: 2px solid #4fc3f7;
+            box-shadow: 0 4px 20px rgba(79, 195, 247, 0.25);
+            color: #fff;
+        }
+        .serial-complexity-card .metric-value {
+            color: #4fc3f7;
+            text-shadow: 0 0 12px rgba(79, 195, 247, 0.6);
+        }
+        .serial-complexity-card .metric-label {
+            color: #b0bec5;
+        }
+
+        .parallel-complexity-card {
+            background: linear-gradient(135deg, #1b2a1b 0%, #1e3a1e 60%, #0a4a1a 100%);
+            border: 2px solid #69f0ae;
+            box-shadow: 0 4px 20px rgba(105, 240, 174, 0.25);
+            color: #fff;
+        }
+        .parallel-complexity-card .metric-value {
+            color: #69f0ae;
+            text-shadow: 0 0 12px rgba(105, 240, 174, 0.6);
+        }
+        .parallel-complexity-card .metric-label {
+            color: #b0bec5;
+        }
+
+        .threads-card {
+            background: linear-gradient(135deg, #2a1a0e 0%, #3a2010 60%, #5a2d00 100%);
+            border: 2px solid #ffb74d;
+            box-shadow: 0 4px 20px rgba(255, 183, 77, 0.25);
+            color: #fff;
+        }
+        .threads-card .metric-value {
+            color: #ffb74d;
+            text-shadow: 0 0 12px rgba(255, 183, 77, 0.6);
+        }
+        .threads-card .metric-label {
+            color: #b0bec5;
+        }
+    </style>
+
 </head>
 
 <body>
@@ -131,16 +175,6 @@
 
     </div>
 
-    <div class="performance">
-
-        <h2>
-            Performance Analysis
-        </h2>
-
-        
-
-    </div>
-
     <div class="key-metrics">
 
         <h2>
@@ -149,24 +183,19 @@
 
         <div class="metrics-grid">
 
-            <div class="metric-card speedup-card">
-                <div class="metric-value" id="avgSpeedup">~2.5x</div>
-                <div class="metric-label">Average Speedup</div>
+            <div class="metric-card serial-complexity-card">
+                <div class="metric-value" id="serialComplexity">O(n²)</div>
+                <div class="metric-label">Serial Complexity</div>
             </div>
 
-            <div class="metric-card time-saved-card">
-                <div class="metric-value" id="timeSaved">~60%</div>
-                <div class="metric-label">Time Saved (100k)</div>
+            <div class="metric-card parallel-complexity-card">
+                <div class="metric-value" id="parallelComplexity">O(n²/p)</div>
+                <div class="metric-label">Parallel Complexity</div>
             </div>
 
             <div class="metric-card threads-card">
                 <div class="metric-value" id="threadsUsed">4</div>
                 <div class="metric-label">Threads Used</div>
-            </div>
-
-            <div class="metric-card complexity-card">
-                <div class="metric-value" id="complexity">O(n log n)</div>
-                <div class="metric-label">Both Algorithms</div>
             </div>
 
         </div>
@@ -236,4 +265,3 @@
 </body>
 
 </html>
-
