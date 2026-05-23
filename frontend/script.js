@@ -22,7 +22,7 @@ const algorithmSerialComplexity = {
 };
 
 const algorithmParallelComplexity = {
-    bubble: "O(n²/p)",
+    bubble: "O(n)",
     shell:  "O(n log² n/p)",
     merge:  "O(n log n/p)",
     quick:  "O(n log n/p)"

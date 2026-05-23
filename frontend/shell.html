@@ -180,7 +180,7 @@ input[type=range] { width:120px; accent-color:#cc0090; }
 
 .gap-info {
   text-align:center; font-size:12px; color:rgba(255,60,190,0.55); letter-spacing:0.05em;
-  margin-top:4px;
+  margin-top:4px;line-height:1.8;
 }
 .gap-info span { color:#ff3cbe; font-weight:bold; }
 
@@ -388,11 +388,9 @@ input[type=range] { width:120px; accent-color:#cc0090; }
       Starting with a large gap (e.g. N/2), it performs gap-insertion passes, then <strong>shrinks the gap</strong>
       each round until gap = 1 - the final pass is a regular insertion sort, but by then the array is
       nearly sorted so it completes quickly. The <strong>parallel version</strong> exploits the fact that
-      for a given gap, each <strong>sub-sequence</strong> (elements at indices 0, gap, 2*gap... or 1, 1+gap, 1+2*gap... etc.)
+      for a given gap, each <strong>sub-sequence</strong>
       is <strong>independent</strong> - different threads sort different sub-sequences simultaneously.
-      Three classic gap sequences are supported: <strong>Shell</strong> (N/2, N/4...), <strong>Knuth</strong>
-      (1, 4, 13, 40, 121...), and <strong>Ciura</strong> (1, 4, 10, 23, 57, 132, 301, 701) -
-      the empirically optimal known sequence.
+      Three classic gap sequences are supported: <strong>Shell</strong> (N/2, N/4...)
     </p>
   </div>
 </div>
@@ -401,7 +399,7 @@ input[type=range] { width:120px; accent-color:#cc0090; }
 const TC     = ['#f472b6','#a78bfa','#fb923c','#34d399','#fde047','#60a5fa','#22d3ee','#e879f9'];
 const TC_CLS = ['bar-t0','bar-t1','bar-t2','bar-t3','bar-t4','bar-t5','bar-t6','bar-t7'];
 
-let N = 50, maxThreads = 8, gapSeqType = 'knuth';
+let N = 50, maxThreads = 8, gapSeqType = 'shell';
 let arr = [], origArr = [];
 let statuses = [], threadAssign = [];
 let running = false, paused = false, done = false;
@@ -626,7 +624,16 @@ function renderGapSeq(gaps, activeIdx) {
   row.innerHTML = h;
   const seqName = {shell:'Shell (N/2...)', knuth:'Knuth (3x+1)', ciura:'Ciura'}[gapSeqType] || '';
   const cur = gaps[activeIdx];
-  info.innerHTML = `<span>${seqName}</span> - Gap <span>${cur}</span> - Pass ${activeIdx + 1} of ${gaps.length}`;
+  const total = gaps.length;
+const isFirst = gaps[0];
+const halvingSteps = gaps.map((g,i) => i === 0 ? `<span>${g}</span>` : `<span>${g}</span>`).join(' → ');
+info.innerHTML = `
+  <span>${seqName}</span> &nbsp;|&nbsp; 
+  Halving: ${halvingSteps} &nbsp;|&nbsp;
+  Now on <span>${cur}</span> 
+  (Pass <span>${activeIdx + 1}</span> of <span>${total}</span>)
+  &nbsp;— comparing elements <span>${cur}</span> positions apart
+`;
 }
 
 function barClass(i) {
