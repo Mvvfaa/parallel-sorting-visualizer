@@ -361,24 +361,25 @@ input[type=range] { width:120px; accent-color:#cc0090; }
     <div class="cx-card">
       <div class="cx-case">Best Case</div>
       <div class="cx-val cx-best">O(n log n)</div>
-      <div class="cx-desc">Nearly sorted input with good gap sequence</div>
+      <div class="cx-desc">Array is nearly sorted — very few swaps needed per gap pass</div>
     </div>
-    
-  
+
+    <div class="cx-card">
+      <div class="cx-case">Average Case</div>
+      <div class="cx-val cx-avg">O(n log² n)</div>
+      <div class="cx-desc">Standard for Shell's N/2 halving sequence on random input</div>
+    </div>
+
     <div class="cx-card">
       <div class="cx-case">Worst Case</div>
-      <div class="cx-val cx-worst">O(n^2)</div>
-      <div class="cx-desc">Bad gap choices (e.g. powers of 2) degrade badly</div>
+      <div class="cx-val cx-worst">O(n²)</div>
+      <div class="cx-desc">Reverse sorted input — maximum swaps at every gap pass</div>
     </div>
-    <div class="cx-card">
-      <div class="cx-case">Parallel (p threads)</div>
-      <div class="cx-val" style="color:#38bdf8">O(n log^2 n/p)</div>
-      <div class="cx-desc">Each gap-subarray sorted independently per thread</div>
-    </div>
+
     <div class="cx-card">
       <div class="cx-case">Space</div>
       <div class="cx-val cx-space">O(1)</div>
-      <div class="cx-desc">In-place - only a temp var for insertion key</div>
+      <div class="cx-desc">In-place sorting — no extra array needed, only a temp variable</div>
     </div>
   </div>
   <div class="cx-notes">
