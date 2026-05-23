@@ -1,0 +1,643 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Parallel Quick Sort</title>
+<style>
+* { box-sizing: border-box; margin: 0; padding: 0; }
+
+body {
+  padding: 24px 20px 40px;
+  font-family: Arial, sans-serif;
+  background: linear-gradient(to bottom right, #030712, #000000, #111827);
+  color: white;
+  min-height: 100vh;
+}
+
+body::before {
+  content: ''; position: fixed; inset: 0; z-index: 0; pointer-events: none;
+  background-image:
+    linear-gradient(rgba(0,255,255,0.04) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(0,255,255,0.04) 1px, transparent 1px);
+  background-size: 48px 48px;
+  animation: gridDrift 14s linear infinite;
+}
+@keyframes gridDrift { from{background-position:0 0} to{background-position:48px 48px} }
+
+body::after {
+  content: ''; position: fixed; inset: 0; z-index: 1; pointer-events: none;
+  background: repeating-linear-gradient(0deg, transparent, transparent 2px, rgba(0,0,0,0.10) 2px, rgba(0,0,0,0.10) 4px);
+}
+
+h1, .controls, .stats-row, .main-panels, .thread-section, .complexity-section, .done-banner {
+  position: relative; z-index: 2;
+}
+
+/* ── TITLE ── */
+h1 {
+  text-align: center; font-size: clamp(32px, 5vw, 52px); color: cyan;
+  margin-bottom: 28px; position: relative;
+  animation: slideDown 0.7s cubic-bezier(0.23,1,0.32,1) both, titlePulse 3s ease-in-out 0.7s infinite;
+}
+@keyframes slideDown { from{opacity:0;transform:translateY(-40px) scaleX(0.88)} to{opacity:1;transform:translateY(0) scaleX(1)} }
+@keyframes titlePulse {
+  0%,100%{text-shadow:0 0 10px cyan,0 0 30px rgba(0,255,255,0.4)}
+  50%{text-shadow:0 0 24px cyan,0 0 70px rgba(0,255,255,0.7),0 0 120px rgba(0,255,255,0.25)}
+}
+h1::before, h1::after {
+  content: attr(data-text); position: absolute; top:0; left:0; width:100%;
+  color:cyan; text-align:center; pointer-events:none; font-size:inherit; font-weight:bold;
+}
+h1::before { clip-path:polygon(0 0,100% 0,100% 32%,0 32%); opacity:0; animation:glitchA 5s infinite; }
+h1::after  { clip-path:polygon(0 68%,100% 68%,100% 100%,0 100%); opacity:0; animation:glitchB 5s infinite; }
+@keyframes glitchA { 0%,87%,100%{opacity:0;transform:translateX(0)} 89%{opacity:.8;transform:translateX(-6px)} 91%{opacity:.8;transform:translateX(4px)} 93%{opacity:0} }
+@keyframes glitchB { 0%,87%,100%{opacity:0;transform:translateX(0)} 90%{opacity:.8;transform:translateX(6px)} 92%{opacity:.8;transform:translateX(-4px)} 94%{opacity:0} }
+
+/* ── CONTROLS ── */
+.controls {
+  display:flex; justify-content:center; align-items:center; gap:12px;
+  margin-bottom:24px; flex-wrap:wrap; animation:fadeUp 0.5s ease 0.1s both;
+}
+@keyframes fadeUp { from{opacity:0;transform:translateY(24px)} to{opacity:1;transform:translateY(0)} }
+
+.ctrl-group {
+  display:flex; align-items:center; gap:9px;
+  background:rgba(255,255,255,0.04); border:1px solid rgba(255,255,255,0.08);
+  border-radius:14px; padding:9px 14px;
+}
+.ctrl-group label { color:cyan; font-weight:bold; font-size:12px; letter-spacing:1px; }
+
+button {
+  background:cyan; border:none; padding:10px 22px; border-radius:15px;
+  font-size:15px; font-weight:bold; cursor:pointer; transition:0.3s;
+  position:relative; overflow:hidden; color:#000;
+}
+button::before {
+  content:''; position:absolute; inset:0; background:#00bcd4;
+  transform:translateX(-105%); transition:transform 0.25s ease; z-index:0;
+}
+button:hover::before { transform:translateX(0); }
+button .lbl { position:relative; z-index:1; }
+button:hover { transform:scale(1.05); box-shadow:0 0 16px rgba(0,255,255,0.55); }
+button:disabled { opacity:0.4; cursor:not-allowed; transform:none; box-shadow:none; }
+
+select {
+  padding:8px 11px; border-radius:10px; border:none; font-size:13px;
+  background:#1e293b; color:white; cursor:pointer; transition:box-shadow 0.25s;
+}
+select:hover, select:focus { outline:none; box-shadow:0 0 10px rgba(0,255,255,0.4); }
+input[type=range] { width:120px; accent-color:cyan; }
+
+/* ── STATS ROW ── */
+.stats-row {
+  display:grid; grid-template-columns:repeat(auto-fit,minmax(120px,1fr));
+  gap:10px; margin-bottom:20px; animation:fadeUp 0.5s ease 0.2s both;
+}
+.stat-box {
+  background:#111827; border-radius:14px; padding:12px 14px; text-align:center;
+  border:1px solid rgba(0,255,255,0.1); position:relative; overflow:hidden;
+  transition:border-color 0.3s, box-shadow 0.3s;
+}
+.stat-box::after { content:''; position:absolute; top:0; left:0; right:0; height:2px; background:var(--ac,cyan); }
+.stat-box:hover { border-color:rgba(0,255,255,0.3); box-shadow:0 0 18px rgba(0,255,255,0.07); }
+.stat-label { font-size:10px; color:rgba(0,255,255,0.55); text-transform:uppercase; letter-spacing:1px; margin-bottom:5px; }
+.stat-value { font-size:24px; font-weight:bold; color:var(--ac,cyan); line-height:1; font-variant-numeric:tabular-nums; }
+
+/* ── MAIN PANELS ── */
+.main-panels { display:grid; grid-template-columns:1fr 1fr; gap:18px; margin-bottom:18px; animation:fadeUp 0.5s ease 0.3s both; }
+@media(max-width:640px){ .main-panels{grid-template-columns:1fr;} }
+
+.panel {
+  background:#111827; border-radius:22px; padding:18px 16px;
+  border:1px solid rgba(0,255,255,0.1); transition:border-color 0.3s, box-shadow 0.3s;
+}
+.panel:hover { border-color:rgba(0,255,255,0.28); box-shadow:0 0 24px rgba(0,255,255,0.06); }
+.panel-title { text-align:center; color:cyan; margin-bottom:14px; font-size:16px; text-shadow:0 0 8px rgba(0,255,255,0.5); }
+
+/* ── BARS ── */
+.bars {
+  height: 300px; display:flex; align-items:flex-end;
+  justify-content:flex-start; gap:2px; overflow:hidden; padding:0 2px;
+}
+.bar-wrap { display:flex; flex-direction:column; align-items:center; justify-content:flex-end; flex:1; min-width:0; max-width:32px; height:100%; }
+.bar-num { font-size:8px; color:rgba(255,255,255,0.55); margin-bottom:2px; line-height:1; font-weight:bold; }
+.bar {
+  width:100%; border-radius:3px 3px 0 0; min-height:3px;
+  transition:height 0.07s ease, background 0.07s ease, filter 0.07s ease;
+  background:linear-gradient(180deg,#00e5ff,#006064);
+  filter:drop-shadow(0 0 3px rgba(0,229,255,0.45));
+}
+.bar.bar-pivot   { background:linear-gradient(180deg,#ff4dff,#9900cc) !important; filter:drop-shadow(0 0 8px rgba(255,77,255,0.9)) !important; }
+.bar.bar-compare { background:linear-gradient(180deg,#ffe600,#cc7000) !important; filter:drop-shadow(0 0 6px rgba(255,230,0,0.8)) !important; }
+.bar.bar-swap    { background:linear-gradient(180deg,#ff3d3d,#7a0000) !important; filter:drop-shadow(0 0 10px rgba(255,61,61,0.9)) !important; }
+.bar.bar-sorted  { background:linear-gradient(180deg,#00ff8c,#005533) !important; filter:drop-shadow(0 0 4px rgba(0,255,140,0.6)) !important; }
+.bar.bar-t0  { background:linear-gradient(180deg,#00d4ff,#003d4d) !important; filter:drop-shadow(0 0 5px rgba(0,212,255,0.7)) !important; }
+.bar.bar-t1  { background:linear-gradient(180deg,#a855f7,#2d0060) !important; filter:drop-shadow(0 0 5px rgba(168,85,247,0.7)) !important; }
+.bar.bar-t2  { background:linear-gradient(180deg,#ff4081,#60001e) !important; filter:drop-shadow(0 0 5px rgba(255,64,129,0.7)) !important; }
+.bar.bar-t3  { background:linear-gradient(180deg,#ffd740,#5c4000) !important; filter:drop-shadow(0 0 5px rgba(255,215,64,0.7)) !important; }
+.bar.bar-t4  { background:linear-gradient(180deg,#1de9b6,#004d3b) !important; filter:drop-shadow(0 0 5px rgba(29,233,182,0.7)) !important; }
+.bar.bar-t5  { background:linear-gradient(180deg,#ff9100,#4d2b00) !important; filter:drop-shadow(0 0 5px rgba(255,145,0,0.7)) !important; }
+.bar.bar-t6  { background:linear-gradient(180deg,#a3ff47,#2a4d00) !important; filter:drop-shadow(0 0 5px rgba(163,255,71,0.7)) !important; }
+.bar.bar-t7  { background:linear-gradient(180deg,#ff6b9d,#4d0020) !important; filter:drop-shadow(0 0 5px rgba(255,107,157,0.7)) !important; }
+.bar.bar-t8  { background:linear-gradient(180deg,#40c4ff,#003d5c) !important; filter:drop-shadow(0 0 5px rgba(64,196,255,0.7)) !important; }
+.bar.bar-t9  { background:linear-gradient(180deg,#e040fb,#3d0050) !important; filter:drop-shadow(0 0 5px rgba(224,64,251,0.7)) !important; }
+.bar.bar-t10 { background:linear-gradient(180deg,#69f0ae,#00331a) !important; filter:drop-shadow(0 0 5px rgba(105,240,174,0.7)) !important; }
+.bar.bar-t11 { background:linear-gradient(180deg,#ff6e40,#4d1a00) !important; filter:drop-shadow(0 0 5px rgba(255,110,64,0.7)) !important; }
+
+/* ── LEGEND ── */
+.legend { display:flex; flex-wrap:wrap; gap:8px; margin-top:10px; justify-content:center; }
+.legend-item { display:flex; align-items:center; gap:5px; font-size:11px; color:#e0f2fe; }
+.legend-box { width:12px; height:12px; border-radius:3px; flex-shrink:0; }
+
+/* ── DONE BANNER ── */
+.done-banner {
+  text-align:center; padding:12px; margin-bottom:18px;
+  background:linear-gradient(90deg,rgba(0,230,118,0.1),rgba(29,233,182,0.1));
+  border:1px solid rgba(0,230,118,0.3); border-radius:14px;
+  color:#00ff8c; font-weight:bold; font-size:16px; letter-spacing:0.08em;
+  display:none;
+}
+.done-banner.show { display:block; animation:fadeUp 0.4s ease; }
+
+/* ── THREAD SECTION ── */
+.thread-section {
+  background:#0f1d37; border:1px solid rgba(59,130,246,0.3); border-radius:22px;
+  padding:20px; margin-bottom:18px; animation:fadeUp 0.5s ease 0.4s both;
+  transition:border-color 0.3s;
+}
+.thread-section:hover { border-color:rgba(59,130,246,0.5); }
+.thread-section-title { text-align:center; color:cyan; margin-bottom:16px; font-size:17px; text-shadow:0 0 8px rgba(0,255,255,0.5); }
+
+.thread-grid {
+  display:grid; grid-template-columns:repeat(auto-fill, minmax(220px,1fr)); gap:10px;
+  max-height:300px; overflow-y:auto;
+  scrollbar-width:thin; scrollbar-color:rgba(0,255,255,0.3) transparent;
+}
+.thread-grid::-webkit-scrollbar { width:4px; }
+.thread-grid::-webkit-scrollbar-thumb { background:rgba(0,255,255,0.3); border-radius:2px; }
+
+.thread-card {
+  background:rgba(0,0,0,0.35); border-radius:14px;
+  border:1px solid rgba(255,255,255,0.07);
+  border-left:3px solid var(--tc);
+  padding:12px 14px; animation:cardIn 0.25s ease both;
+}
+@keyframes cardIn { from{opacity:0;transform:scale(0.94)} to{opacity:1;transform:scale(1)} }
+
+.tc-header { display:flex; align-items:center; justify-content:space-between; margin-bottom:8px; }
+.tc-badge {
+  display:inline-flex; align-items:center; gap:5px; padding:3px 10px;
+  border-radius:20px; font-size:11px; font-weight:bold;
+  background:color-mix(in srgb, var(--tc) 18%, transparent);
+  color:var(--tc); border:1px solid color-mix(in srgb, var(--tc) 45%, transparent);
+}
+.tc-dot { width:6px; height:6px; border-radius:50%; background:var(--tc); animation:blink 0.75s infinite; flex-shrink:0; }
+@keyframes blink { 0%,100%{opacity:1} 50%{opacity:0.15} }
+.tc-pct { font-size:13px; font-weight:bold; color:var(--tc); }
+
+.tc-seg { font-size:11px; color:rgba(200,230,255,0.65); margin-bottom:8px; }
+.tc-seg strong { color:rgba(200,230,255,0.9); }
+
+.tc-prog-bg { height:5px; background:rgba(255,255,255,0.07); border-radius:3px; overflow:hidden; margin-bottom:7px; }
+.tc-prog-fill { height:100%; background:var(--tc); border-radius:3px; transition:width 0.12s ease; box-shadow:0 0 8px var(--tc); }
+
+.tc-mini-bars { display:flex; align-items:flex-end; gap:1px; height:28px; }
+.tc-mini-bar { flex:1; min-width:0; border-radius:1px 1px 0 0; min-height:2px; background:var(--tc); opacity:0.55; transition:height 0.07s ease, opacity 0.07s; }
+.tc-mini-bar.active { opacity:1; filter:drop-shadow(0 0 3px var(--tc)); }
+
+.no-threads { font-size:13px; color:rgba(0,255,255,0.4); text-align:center; padding:24px 0; letter-spacing:0.06em; }
+
+/* ── COMPLEXITY ── */
+.complexity-section {
+  background:#111827; border-radius:22px; padding:22px 20px;
+  border:1px solid rgba(0,255,255,0.08); animation:fadeUp 0.5s ease 0.5s both;
+  transition:border-color 0.3s;
+}
+.complexity-section:hover { border-color:rgba(0,255,255,0.28); }
+.complexity-section h2 { text-align:center; color:cyan; margin-bottom:16px; font-size:20px; text-shadow:0 0 8px rgba(0,255,255,0.5); }
+
+.complexity-cards { display:grid; grid-template-columns:repeat(auto-fit,minmax(160px,1fr)); gap:12px; margin-bottom:18px; }
+.cx-card {
+  background:rgba(0,255,255,0.04); border:1px solid rgba(0,255,255,0.12);
+  border-radius:14px; padding:14px 16px; text-align:center;
+  transition:transform 0.25s, box-shadow 0.25s;
+}
+.cx-card:hover { transform:translateY(-4px); box-shadow:0 8px 24px rgba(0,0,0,0.4), 0 0 14px rgba(0,255,255,0.08); }
+.cx-case { font-size:10px; color:rgba(0,255,255,0.55); text-transform:uppercase; letter-spacing:1px; margin-bottom:6px; }
+.cx-val { font-size:20px; font-weight:bold; margin-bottom:4px; }
+.cx-desc { font-size:11px; color:rgba(255,255,255,0.45); line-height:1.4; }
+.cx-best  { color:#00ff8c; }
+.cx-avg   { color:cyan; }
+.cx-worst { color:#ff8080; }
+.cx-space { color:#c084fc; }
+
+.cx-notes {
+  background:rgba(0,255,255,0.03); border:1px solid rgba(0,255,255,0.08);
+  border-radius:12px; padding:14px 16px;
+}
+.cx-notes p { font-size:12px; color:rgba(200,230,255,0.6); line-height:1.7; }
+.cx-notes strong { color:cyan; }
+
+::-webkit-scrollbar { width:6px; height:6px; }
+::-webkit-scrollbar-track { background:#030712; }
+::-webkit-scrollbar-thumb { background:#00b8c4; border-radius:3px; }
+</style>
+</head>
+<body>
+
+<h1 data-text="Parallel Quick Sort">Parallel Quick Sort</h1>
+
+<!-- CONTROLS -->
+<div class="controls">
+  <button id="btn-start" onclick="handleStart()"><span class="lbl">▶ Start</span></button>
+  <button id="btn-pause" onclick="handlePause()" disabled><span class="lbl">⏸ Pause</span></button>
+  <button onclick="handleReset()"><span class="lbl">↺ Reset</span></button>
+
+  <div class="ctrl-group">
+    <label>SIZE</label>
+    <select id="sel-size" onchange="changeSize(+this.value)">
+      <option value="30">30</option>
+      <option value="50" selected>50</option>
+      <option value="70">70</option>
+      <option value="100">100</option>
+    </select>
+  </div>
+
+  <div class="ctrl-group">
+    <label>THREADS</label>
+    <select id="sel-threads" onchange="maxThreads=+this.value;document.getElementById('m-threads').textContent=this.value">
+      <option value="4">4</option>
+      <option value="6">6</option>
+      <option value="8" selected>8</option>
+      <option value="12">12</option>
+    </select>
+  </div>
+
+  <div class="ctrl-group">
+    <label>SPEED</label>
+    <input type="range" id="spd" min="1" max="5" value="3" step="1" oninput="setSpeed(+this.value)">
+    <span id="spd-lbl" style="color:cyan;font-weight:bold;font-size:13px;min-width:22px">3×</span>
+  </div>
+</div>
+
+<!-- STATS -->
+<div class="stats-row">
+  <div class="stat-box" style="--ac:cyan">     <div class="stat-label">Array Size</div>    <div class="stat-value" id="st-size">50</div></div>
+  <div class="stat-box" style="--ac:#00ff8c">  <div class="stat-label">Sorted</div>        <div class="stat-value" id="st-sorted">0</div></div>
+  <div class="stat-box" style="--ac:#ffd740">  <div class="stat-label">Active Threads</div><div class="stat-value" id="st-threads">0</div></div>
+  <div class="stat-box" style="--ac:#a855f7">  <div class="stat-label">Comparisons</div>  <div class="stat-value" id="st-comps">0</div></div>
+  <div class="stat-box" style="--ac:#ff9100">  <div class="stat-label">Swaps</div>         <div class="stat-value" id="st-swaps">0</div></div>
+  <div class="stat-box" style="--ac:#ff4081">  <div class="stat-label">Status</div>        <div class="stat-value" id="st-status" style="font-size:1rem;padding-top:5px">READY</div></div>
+</div>
+
+<!-- BAR PANELS -->
+<div class="main-panels">
+  <div class="panel">
+    <div class="panel-title">🔀 Sorting in Progress</div>
+    <div class="bars" id="sort-bars"></div>
+    <div class="legend">
+      <div class="legend-item"><div class="legend-box" style="background:linear-gradient(#00e5ff,#006064)"></div>Unsorted</div>
+      <div class="legend-item"><div class="legend-box" style="background:linear-gradient(#ff4dff,#9900cc)"></div>Pivot</div>
+      <div class="legend-item"><div class="legend-box" style="background:linear-gradient(#ffe600,#cc7000)"></div>Comparing</div>
+      <div class="legend-item"><div class="legend-box" style="background:linear-gradient(#ff3d3d,#7a0000)"></div>Swapping</div>
+      <div class="legend-item"><div class="legend-box" style="background:linear-gradient(#00ff8c,#005533)"></div>Sorted</div>
+    </div>
+  </div>
+  <div class="panel">
+    <div class="panel-title">📋 Original Array</div>
+    <div class="bars" id="orig-bars"></div>
+    <div class="legend">
+      <div class="legend-item"><div class="legend-box" style="background:linear-gradient(#80deea,#004d5e)"></div>Original values (unsorted)</div>
+    </div>
+  </div>
+</div>
+
+<!-- DONE BANNER -->
+<div class="done-banner" id="done-banner">✓ ARRAY FULLY SORTED — All elements in place</div>
+
+<!-- THREAD ACTIVITY -->
+<div class="thread-section">
+  <div class="thread-section-title">⚡ Live Thread Activity</div>
+  <div class="thread-grid" id="thread-grid">
+    <div class="no-threads">No threads active — press Start to begin.</div>
+  </div>
+</div>
+
+<!-- COMPLEXITY -->
+<div class="complexity-section">
+  <h2>Quick Sort — Time &amp; Space Complexity</h2>
+  <div class="complexity-cards">
+    <div class="cx-card">
+      <div class="cx-case">Best Case</div>
+      <div class="cx-val cx-best">O(n log n)</div>
+      <div class="cx-desc">Pivot always splits array into two equal halves</div>
+    </div>
+    <div class="cx-card">
+      <div class="cx-case">Average Case</div>
+      <div class="cx-val cx-avg">O(n log n)</div>
+      <div class="cx-desc">Random pivots yield balanced partitions on average</div>
+    </div>
+    <div class="cx-card">
+      <div class="cx-case">Worst Case</div>
+      <div class="cx-val cx-worst">O(n²)</div>
+      <div class="cx-desc">Pivot is always the smallest or largest element</div>
+    </div>
+    <div class="cx-card">
+      <div class="cx-case">Parallel (p threads)</div>
+      <div class="cx-val" style="color:#00d4ff">O(n log n / p)</div>
+      <div class="cx-desc">Each thread sorts an independent sub-segment</div>
+    </div>
+    <div class="cx-card">
+      <div class="cx-case">Space</div>
+      <div class="cx-val cx-space">O(log n)</div>
+      <div class="cx-desc">Recursive call stack depth; in-place — no extra array</div>
+    </div>
+  </div>
+  <div class="cx-notes">
+    <p>
+      <strong>How it works:</strong> Quick Sort picks a <strong>pivot</strong>, partitions elements into
+      smaller-left / larger-right sub-arrays, then recurses on each half.
+      In the <strong>parallel version</strong>, independent sub-problems are handed off to separate threads simultaneously,
+      reducing wall-clock time by roughly <strong>p×</strong> (where p = thread count) on balanced inputs.
+      The <strong>Lomuto partition scheme</strong> is used here: the last element is chosen as pivot,
+      and a single scan places it in its final sorted position.
+      Quick Sort is <strong>in-place</strong> (O(log n) stack space) but <strong>not stable</strong> —
+      equal elements may change relative order.
+    </p>
+  </div>
+</div>
+
+<script>
+const TC = ['#00d4ff','#a855f7','#ff4081','#ffd740','#1de9b6','#ff9100','#a3ff47','#ff6b9d','#40c4ff','#e040fb','#69f0ae','#ff6e40'];
+const TC_CLS = ['bar-t0','bar-t1','bar-t2','bar-t3','bar-t4','bar-t5','bar-t6','bar-t7','bar-t8','bar-t9','bar-t10','bar-t11'];
+
+let N = 50, maxThreads = 8;
+let arr = [], origArr = [];
+let statuses = [], threadAssign = [];
+let running = false, paused = false, done = false;
+let speedMs = 80;
+let comparisons = 0, swaps = 0;
+let activeThreads = {};
+let stepQueue = [], stepIdx = 0;
+let rafId = null, lastTime = 0;
+
+const speedMap = {1:280,2:140,3:80,4:30,5:8};
+
+// ── generate & init ──
+function genArray() {
+  arr = Array.from({length:N}, (_,i) => Math.round(4 + (i/(N-1))*95));
+  for(let i=arr.length-1;i>0;i--){const j=Math.floor(Math.random()*(i+1));[arr[i],arr[j]]=[arr[j],arr[i]];}
+  origArr = arr.slice();
+  statuses = new Array(N).fill('default');
+  threadAssign = new Array(N).fill(-1);
+  comparisons = 0; swaps = 0; activeThreads = {};
+  renderOrigBars(); renderSortBars(); updateStats(); renderThreadGrid();
+  document.getElementById('done-banner').classList.remove('show');
+}
+
+function changeSize(v){ N=v; if(!running) genArray(); }
+
+function setSpeed(v){
+  speedMs = speedMap[v]||80;
+  document.getElementById('spd-lbl').textContent = v+'×';
+}
+
+// ── step builder ──
+function buildSteps(){
+  stepQueue = [];
+  const a = arr.slice();
+  const st = new Array(N).fill('default');
+  const th = new Array(N).fill(-1);
+  let tc=0, sc=0, tId=0, cIdx=0;
+
+  function snap(type,data){
+    stepQueue.push({type,data,arr:a.slice(),st:st.slice(),th:th.slice(),tc,sc});
+  }
+
+  function partition(lo,hi,ci,tid){
+    const pivot=a[hi]; st[hi]='pivot'; th[hi]=tid;
+    snap('pivot',{hi,tid,ci});
+    let i=lo-1;
+    for(let j=lo;j<hi;j++){
+      st[j]='compare'; th[j]=tid; tc++;
+      snap('compare',{j,hi,tid,ci});
+      if(a[j]<=pivot){
+        i++;
+        if(i!==j){
+          st[i]='swap'; st[j]='swap'; sc++;
+          snap('preswap',{i,j,tid,ci});
+          [a[i],a[j]]=[a[j],a[i]];
+          snap('swap',{i,j,tid,ci});
+        }
+        st[i]='thread'; th[i]=tid;
+      }
+      if(st[j]!=='sorted'&&st[j]!=='thread') st[j]='thread';
+    }
+    i++;
+    if(i!==hi){ st[i]='swap'; st[hi]='swap'; sc++; snap('preswap',{i,j:hi,tid,ci}); [a[i],a[hi]]=[a[hi],a[i]]; snap('swap',{i,j:hi,tid,ci}); }
+    st[i]='sorted'; th[i]=-1; snap('placed',{pp:i,tid,ci});
+    return i;
+  }
+
+  let waves=[[{lo:0,hi:N-1}]];
+  while(waves.length){
+    const wave=waves.shift(); const next=[];
+    for(let w=0;w<wave.length;w+=maxThreads){
+      const chunk=wave.slice(w,w+maxThreads);
+      const tIds=chunk.map(()=>tId++);
+      const cIdxs=chunk.map(()=>cIdx++%TC.length);
+      chunk.forEach(({lo,hi},k)=>{ for(let x=lo;x<=hi;x++){th[x]=tIds[k];st[x]='thread';} });
+      snap('newthreads',{threads:chunk.map(({lo,hi},k)=>({lo,hi,tid:tIds[k],ci:cIdxs[k]}))});
+      const pivots=chunk.map(({lo,hi},k)=>partition(lo,hi,cIdxs[k],tIds[k]));
+      chunk.forEach(({lo,hi})=>{ for(let x=lo;x<=hi;x++){if(st[x]!=='sorted'){st[x]='default';th[x]=-1;}} });
+      snap('tdone',{tIds});
+      chunk.forEach(({lo,hi},k)=>{
+        const p=pivots[k];
+        if(lo<p-1) next.push({lo,hi:p-1});
+        if(p+1<hi) next.push({lo:p+1,hi});
+      });
+    }
+    if(next.length) waves.push(next);
+  }
+  for(let x=0;x<N;x++) st[x]='sorted';
+  snap('alldone',{});
+}
+
+function applyStep(s){
+  arr=s.arr.slice(); statuses=s.st.slice(); threadAssign=s.th.slice();
+  comparisons=s.tc; swaps=s.sc;
+  if(s.type==='newthreads') s.data.threads.forEach(({lo,hi,tid,ci})=>{ activeThreads[tid]={lo,hi,ci,progress:0}; });
+  if(s.type==='tdone') s.data.tIds.forEach(tid=>{ delete activeThreads[tid]; });
+  if(s.type==='alldone') done=true;
+  // update progress per thread
+  Object.keys(activeThreads).forEach(tid=>{
+    const t=activeThreads[tid];
+    const total=t.hi-t.lo+1;
+    const sortedCnt=statuses.slice(t.lo,t.hi+1).filter(x=>x==='sorted').length;
+    t.progress=Math.round((sortedCnt/total)*100);
+    // capture segment values for mini bars
+    t.segVals=arr.slice(t.lo,t.hi+1);
+    t.segSt=statuses.slice(t.lo,t.hi+1);
+  });
+}
+
+// ── render bars ──
+function barClass(i){
+  const s=statuses[i];
+  if(s==='sorted') return 'bar-sorted';
+  if(s==='pivot')  return 'bar-pivot';
+  if(s==='compare') return 'bar-compare';
+  if(s==='swap'||s==='preswap') return 'bar-swap';
+  if(s==='thread'){
+    const tid=threadAssign[i];
+    if(tid>=0&&activeThreads[tid]) return TC_CLS[activeThreads[tid].ci%TC_CLS.length];
+  }
+  return '';
+}
+
+function renderSortBars(){
+  const c=document.getElementById('sort-bars');
+  const max=Math.max(...arr,1);
+  let h='';
+  for(let i=0;i<arr.length;i++){
+    const pct=Math.max(1,Math.round((arr[i]/max)*100));
+    h+=`<div class="bar-wrap"><div class="bar-num">${arr[i]}</div><div class="bar ${barClass(i)}" style="height:${pct}%"></div></div>`;
+  }
+  c.innerHTML=h;
+}
+
+function renderOrigBars(){
+  const c=document.getElementById('orig-bars');
+  const max=Math.max(...origArr,1);
+  let h='';
+  for(let i=0;i<origArr.length;i++){
+    const pct=Math.max(1,Math.round((origArr[i]/max)*100));
+    h+=`<div class="bar-wrap"><div class="bar-num">${origArr[i]}</div><div class="bar" style="height:${pct}%;background:linear-gradient(180deg,#80deea,#004d5e);filter:drop-shadow(0 0 2px rgba(128,222,234,0.4))"></div></div>`;
+  }
+  c.innerHTML=h;
+}
+
+// ── thread panel ──
+function renderThreadGrid(){
+  const g=document.getElementById('thread-grid');
+  const keys=Object.keys(activeThreads);
+  if(!keys.length){
+    g.innerHTML='<div class="no-threads">No threads active — press Start to begin.</div>';
+    document.getElementById('st-threads').textContent='0';
+    return;
+  }
+  document.getElementById('st-threads').textContent=keys.length;
+  let h='';
+  keys.forEach(tid=>{
+    const t=activeThreads[tid];
+    const col=TC[t.ci%TC.length];
+    const segLen=t.hi-t.lo+1;
+
+    // mini bar sparkline for the thread's sub-segment
+    let miniH='';
+    if(t.segVals&&t.segVals.length){
+      const mx=Math.max(...t.segVals,1);
+      t.segVals.forEach((v,k)=>{
+        const ph=Math.max(8,Math.round((v/mx)*100));
+        const isActive=t.segSt&&(t.segSt[k]==='compare'||t.segSt[k]==='swap'||t.segSt[k]==='pivot');
+        miniH+=`<div class="tc-mini-bar${isActive?' active':''}" style="height:${ph}%"></div>`;
+      });
+    }
+
+    // phase label
+    const phaseTxt = t.progress===100 ? '✓ done' : t.progress===0 ? 'starting…' : `partitioning`;
+
+    h+=`<div class="thread-card" style="--tc:${col}">
+      <div class="tc-header">
+        <div class="tc-badge"><div class="tc-dot"></div>Thread ${tid}</div>
+        <div class="tc-pct">${t.progress}%</div>
+      </div>
+      <div class="tc-seg">
+        <strong>Seg [${t.lo} … ${t.hi}]</strong> &nbsp;·&nbsp; ${segLen} elements &nbsp;·&nbsp; <span style="color:${col};opacity:0.8">${phaseTxt}</span>
+      </div>
+      <div class="tc-prog-bg"><div class="tc-prog-fill" style="width:${t.progress}%"></div></div>
+      <div class="tc-mini-bars">${miniH}</div>
+    </div>`;
+  });
+  g.innerHTML=h;
+}
+
+function updateStats(){
+  document.getElementById('st-size').textContent=N;
+  document.getElementById('st-sorted').textContent=statuses.filter(s=>s==='sorted').length;
+  document.getElementById('st-comps').textContent=comparisons;
+  document.getElementById('st-swaps').textContent=swaps;
+}
+
+// ── animation loop ──
+function animate(ts){
+  if(!running||paused) return;
+  if(ts-lastTime>=speedMs){
+    lastTime=ts;
+    if(stepIdx<stepQueue.length){
+      applyStep(stepQueue[stepIdx++]);
+      renderSortBars(); renderThreadGrid(); updateStats();
+      if(done){ finishSort(); return; }
+    } else { finishSort(); return; }
+  }
+  rafId=requestAnimationFrame(animate);
+}
+
+function finishSort(){
+  running=false;
+  statuses=new Array(N).fill('sorted');
+  activeThreads={};
+  renderSortBars(); renderThreadGrid(); updateStats();
+  document.getElementById('st-status').textContent='DONE';
+  document.getElementById('st-status').style.color='#00ff8c';
+  document.getElementById('done-banner').classList.add('show');
+  document.getElementById('btn-start').disabled=true;
+  document.getElementById('btn-pause').disabled=true;
+  document.getElementById('st-threads').textContent='0';
+}
+
+function handleStart(){
+  if(done||running) return;
+  buildSteps(); stepIdx=0;
+  running=true; paused=false;
+  document.getElementById('btn-start').disabled=true;
+  document.getElementById('btn-pause').disabled=false;
+  document.getElementById('st-status').textContent='RUNNING';
+  document.getElementById('st-status').style.color='#ffd740';
+  lastTime=0; rafId=requestAnimationFrame(animate);
+}
+
+function handlePause(){
+  if(!running) return;
+  if(!paused){
+    paused=true; cancelAnimationFrame(rafId);
+    document.getElementById('btn-pause').querySelector('.lbl').textContent='▶ Resume';
+    document.getElementById('st-status').textContent='PAUSED';
+    document.getElementById('st-status').style.color='rgba(0,255,255,0.5)';
+  } else {
+    paused=false;
+    document.getElementById('btn-pause').querySelector('.lbl').textContent='⏸ Pause';
+    document.getElementById('st-status').textContent='RUNNING';
+    document.getElementById('st-status').style.color='#ffd740';
+    lastTime=0; rafId=requestAnimationFrame(animate);
+  }
+}
+
+function handleReset(){
+  running=false; paused=false; done=false;
+  cancelAnimationFrame(rafId);
+  activeThreads={}; stepQueue=[]; stepIdx=0;
+  genArray();
+  document.getElementById('btn-start').disabled=false;
+  document.getElementById('btn-start').querySelector('.lbl').textContent='▶ Start';
+  document.getElementById('btn-pause').disabled=true;
+  document.getElementById('btn-pause').querySelector('.lbl').textContent='⏸ Pause';
+  document.getElementById('st-status').textContent='READY';
+  document.getElementById('st-status').style.color='cyan';
+}
+
+genArray();
+</script>
+</body>
+</html>

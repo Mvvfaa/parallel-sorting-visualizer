@@ -54,6 +54,40 @@
         .threads-card .metric-label {
             color: #b0bec5;
         }
+
+        /* Navigation buttons row */
+        .nav-buttons {
+            display: flex;
+            gap: 12px;
+            justify-content: center;
+            flex-wrap: wrap;
+            margin: 18px 0 10px;
+        }
+        .nav-buttons a {
+            display: inline-block;
+            padding: 10px 22px;
+            border-radius: 8px;
+            font-size: 14px;
+            font-weight: 600;
+            text-decoration: none;
+            color: #fff;
+            background: linear-gradient(135deg, #1a1a2e, #0f3460);
+            border: 2px solid #4fc3f7;
+            box-shadow: 0 2px 12px rgba(79, 195, 247, 0.2);
+            transition: transform 0.15s, box-shadow 0.15s;
+        }
+        .nav-buttons a:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 6px 20px rgba(79, 195, 247, 0.4);
+        }
+        .nav-buttons a.nav-bubble  { border-color: #f48fb1; box-shadow: 0 2px 12px rgba(244,143,177,0.2); }
+        .nav-buttons a.nav-bubble:hover  { box-shadow: 0 6px 20px rgba(244,143,177,0.45); }
+        .nav-buttons a.nav-merge   { border-color: #69f0ae; box-shadow: 0 2px 12px rgba(105,240,174,0.2); }
+        .nav-buttons a.nav-merge:hover   { box-shadow: 0 6px 20px rgba(105,240,174,0.45); }
+        .nav-buttons a.nav-quick   { border-color: #ffb74d; box-shadow: 0 2px 12px rgba(255,183,77,0.2); }
+        .nav-buttons a.nav-quick:hover   { box-shadow: 0 6px 20px rgba(255,183,77,0.45); }
+        .nav-buttons a.nav-shell   { border-color: #ce93d8; box-shadow: 0 2px 12px rgba(206,147,216,0.2); }
+        .nav-buttons a.nav-shell:hover   { box-shadow: 0 6px 20px rgba(206,147,216,0.45); }
     </style>
 
 </head>
@@ -63,6 +97,14 @@
     <h1>
         Parallel Sorting Visualizer
     </h1>
+
+    <!-- Navigation buttons -->
+    <div class="nav-buttons">
+        <a href="Bubble.html" class="nav-bubble">Parallel Bubble Sort</a>
+        <a href="Merge.html"  class="nav-merge" >Parallel Merge Sort</a>
+        <a href="quick.html"  class="nav-quick" >Parallel Quick Sort</a>
+        <a href="shell.html"  class="nav-shell" >Parallel Shell Sort</a>
+    </div>
 
     <div class="controls">
 
@@ -142,7 +184,7 @@
         <div class="section">
 
             <h2>
-                Parallel Execution
+                Serial Execution
             </h2>
 
             <div
@@ -159,7 +201,7 @@
         <div class="section">
 
             <h2>
-                Serial Execution
+                Parallel Execution
             </h2>
 
             <div

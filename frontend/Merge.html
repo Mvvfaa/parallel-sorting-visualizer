@@ -1,0 +1,693 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Parallel Merge Sort</title>
+<style>
+* { box-sizing: border-box; margin: 0; padding: 0; }
+
+body {
+  padding: 24px 20px 40px;
+  font-family: Arial, sans-serif;
+  background: linear-gradient(to bottom right, #0f0520, #000000, #1a0735);
+  color: white;
+  min-height: 100vh;
+}
+
+body::before {
+  content: ''; position: fixed; inset: 0; z-index: 0; pointer-events: none;
+  background-image:
+    linear-gradient(rgba(168,85,247,0.04) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(168,85,247,0.04) 1px, transparent 1px);
+  background-size: 48px 48px;
+  animation: gridDrift 14s linear infinite;
+}
+@keyframes gridDrift { from{background-position:0 0} to{background-position:48px 48px} }
+
+body::after {
+  content: ''; position: fixed; inset: 0; z-index: 1; pointer-events: none;
+  background: repeating-linear-gradient(0deg, transparent, transparent 2px, rgba(0,0,0,0.10) 2px, rgba(0,0,0,0.10) 4px);
+}
+
+h1, .controls, .stats-row, .main-panels, .pass-section, .thread-section, .complexity-section, .done-banner {
+  position: relative; z-index: 2;
+}
+
+/* ── TITLE ── */
+h1 {
+  text-align: center; font-size: clamp(32px, 5vw, 52px); color: #a855f7;
+  margin-bottom: 28px; position: relative;
+  animation: slideDown 0.7s cubic-bezier(0.23,1,0.32,1) both, titlePulse 3s ease-in-out 0.7s infinite;
+}
+@keyframes slideDown { from{opacity:0;transform:translateY(-40px) scaleX(0.88)} to{opacity:1;transform:translateY(0) scaleX(1)} }
+@keyframes titlePulse {
+  0%,100%{text-shadow:0 0 10px #7c3aed,0 0 30px rgba(124,58,237,0.4)}
+  50%{text-shadow:0 0 24px #a855f7,0 0 70px rgba(168,85,247,0.7),0 0 120px rgba(168,85,247,0.25)}
+}
+h1::before, h1::after {
+  content: attr(data-text); position: absolute; top:0; left:0; width:100%;
+  color:#a855f7; text-align:center; pointer-events:none; font-size:inherit; font-weight:bold;
+}
+h1::before { clip-path:polygon(0 0,100% 0,100% 32%,0 32%); opacity:0; animation:glitchA 5s infinite; }
+h1::after  { clip-path:polygon(0 68%,100% 68%,100% 100%,0 100%); opacity:0; animation:glitchB 5s infinite; }
+@keyframes glitchA { 0%,87%,100%{opacity:0;transform:translateX(0)} 89%{opacity:.8;transform:translateX(-6px)} 91%{opacity:.8;transform:translateX(4px)} 93%{opacity:0} }
+@keyframes glitchB { 0%,87%,100%{opacity:0;transform:translateX(0)} 90%{opacity:.8;transform:translateX(6px)} 92%{opacity:.8;transform:translateX(-4px)} 94%{opacity:0} }
+
+/* ── CONTROLS ── */
+.controls {
+  display:flex; justify-content:center; align-items:center; gap:12px;
+  margin-bottom:24px; flex-wrap:wrap; animation:fadeUp 0.5s ease 0.1s both;
+}
+@keyframes fadeUp { from{opacity:0;transform:translateY(24px)} to{opacity:1;transform:translateY(0)} }
+
+.ctrl-group {
+  display:flex; align-items:center; gap:9px;
+  background:rgba(255,255,255,0.04); border:1px solid rgba(255,255,255,0.08);
+  border-radius:14px; padding:9px 14px;
+}
+.ctrl-group label { color:#a855f7; font-weight:bold; font-size:12px; letter-spacing:1px; }
+
+button {
+  background:#7c3aed; border:none; padding:10px 22px; border-radius:15px;
+  font-size:15px; font-weight:bold; cursor:pointer; transition:0.3s;
+  position:relative; overflow:hidden; color:#fff;
+}
+button::before {
+  content:''; position:absolute; inset:0; background:#6d28d9;
+  transform:translateX(-105%); transition:transform 0.25s ease; z-index:0;
+}
+button:hover::before { transform:translateX(0); }
+button .lbl { position:relative; z-index:1; }
+button:hover { transform:scale(1.05); box-shadow:0 0 16px rgba(168,85,247,0.55); }
+button:disabled { opacity:0.4; cursor:not-allowed; transform:none; box-shadow:none; }
+
+select {
+  padding:8px 11px; border-radius:10px; border:none; font-size:13px;
+  background:#1e1a2e; color:white; cursor:pointer; transition:box-shadow 0.25s;
+}
+select:hover, select:focus { outline:none; box-shadow:0 0 10px rgba(168,85,247,0.4); }
+input[type=range] { width:120px; accent-color:#7c3aed; }
+
+/* ── STATS ROW ── */
+.stats-row {
+  display:grid; grid-template-columns:repeat(auto-fit,minmax(120px,1fr));
+  gap:10px; margin-bottom:20px; animation:fadeUp 0.5s ease 0.2s both;
+}
+.stat-box {
+  background:#1a0f2e; border-radius:14px; padding:12px 14px; text-align:center;
+  border:1px solid rgba(168,85,247,0.1); position:relative; overflow:hidden;
+  transition:border-color 0.3s, box-shadow 0.3s;
+}
+.stat-box::after { content:''; position:absolute; top:0; left:0; right:0; height:2px; background:var(--ac,#7c3aed); }
+.stat-box:hover { border-color:rgba(168,85,247,0.3); box-shadow:0 0 18px rgba(168,85,247,0.07); }
+.stat-label { font-size:10px; color:rgba(168,85,247,0.55); text-transform:uppercase; letter-spacing:1px; margin-bottom:5px; }
+.stat-value { font-size:24px; font-weight:bold; color:var(--ac,#7c3aed); line-height:1; font-variant-numeric:tabular-nums; }
+
+/* ── MAIN PANELS ── */
+.main-panels { display:grid; grid-template-columns:1fr 1fr; gap:18px; margin-bottom:18px; animation:fadeUp 0.5s ease 0.3s both; }
+@media(max-width:640px){ .main-panels{grid-template-columns:1fr;} }
+
+.panel {
+  background:#1a0f2e; border-radius:22px; padding:18px 16px;
+  border:1px solid rgba(168,85,247,0.1); transition:border-color 0.3s, box-shadow 0.3s;
+}
+.panel:hover { border-color:rgba(168,85,247,0.28); box-shadow:0 0 24px rgba(168,85,247,0.06); }
+.panel-title { text-align:center; color:#a855f7; margin-bottom:14px; font-size:16px; text-shadow:0 0 8px rgba(168,85,247,0.5); }
+
+/* ── BARS ── */
+.bars {
+  height:300px; display:flex; align-items:flex-end;
+  justify-content:flex-start; gap:2px; overflow:hidden; padding:0 2px;
+}
+.bar-wrap { display:flex; flex-direction:column; align-items:center; justify-content:flex-end; flex:1; min-width:0; max-width:32px; height:100%; }
+.bar-num { font-size:8px; color:rgba(255,255,255,0.55); margin-bottom:2px; line-height:1; font-weight:bold; }
+.bar {
+  width:100%; border-radius:3px 3px 0 0; min-height:3px;
+  transition:height 0.07s ease, background 0.07s ease, filter 0.07s ease;
+  background:linear-gradient(180deg,#7c3aed,#2e1065);
+  filter:drop-shadow(0 0 3px rgba(124,58,237,0.45));
+}
+.bar.bar-compare { background:linear-gradient(180deg,#ffe600,#cc7000) !important; filter:drop-shadow(0 0 6px rgba(255,230,0,0.8)) !important; }
+.bar.bar-merge   { background:linear-gradient(180deg,#38bdf8,#0c4a6e) !important; filter:drop-shadow(0 0 8px rgba(56,189,248,0.8)) !important; }
+.bar.bar-sorted  { background:linear-gradient(180deg,#c084fc,#2e1065) !important; filter:drop-shadow(0 0 4px rgba(192,132,252,0.6)) !important; }
+.bar.bar-t0  { background:linear-gradient(180deg,#c084fc,#581c87) !important; filter:drop-shadow(0 0 5px rgba(192,132,252,0.7)) !important; }
+.bar.bar-t1  { background:linear-gradient(180deg,#60a5fa,#1e3a8a) !important; filter:drop-shadow(0 0 5px rgba(96,165,250,0.7)) !important; }
+.bar.bar-t2  { background:linear-gradient(180deg,#fb923c,#7c2d12) !important; filter:drop-shadow(0 0 5px rgba(251,146,60,0.7)) !important; }
+.bar.bar-t3  { background:linear-gradient(180deg,#e879f9,#701a75) !important; filter:drop-shadow(0 0 5px rgba(232,121,249,0.7)) !important; }
+.bar.bar-t4  { background:linear-gradient(180deg,#fde047,#713f12) !important; filter:drop-shadow(0 0 5px rgba(253,224,71,0.7)) !important; }
+.bar.bar-t5  { background:linear-gradient(180deg,#f472b6,#831843) !important; filter:drop-shadow(0 0 5px rgba(244,114,182,0.7)) !important; }
+.bar.bar-t6  { background:linear-gradient(180deg,#34d399,#064e3b) !important; filter:drop-shadow(0 0 5px rgba(52,211,153,0.7)) !important; }
+.bar.bar-t7  { background:linear-gradient(180deg,#22d3ee,#164e63) !important; filter:drop-shadow(0 0 5px rgba(34,211,238,0.7)) !important; }
+
+/* ── LEGEND ── */
+.legend { display:flex; flex-wrap:wrap; gap:8px; margin-top:10px; justify-content:center; }
+.legend-item { display:flex; align-items:center; gap:5px; font-size:11px; color:#e0f2fe; }
+.legend-box { width:12px; height:12px; border-radius:3px; flex-shrink:0; }
+
+/* ── PASS TRACKER ── */
+.pass-section {
+  background:#1a0f2e; border:1px solid rgba(168,85,247,0.1); border-radius:22px;
+  padding:20px 16px; margin-bottom:18px; animation:fadeUp 0.5s ease 0.35s both;
+  transition:border-color 0.3s;
+}
+.pass-section:hover { border-color:rgba(168,85,247,0.28); }
+.pass-section-title { text-align:center; color:#a855f7; margin-bottom:14px; font-size:16px; text-shadow:0 0 8px rgba(168,85,247,0.5); }
+
+.pass-track { display:flex; align-items:center; gap:4px; flex-wrap:wrap; justify-content:center; }
+.pass-dot {
+  width:28px; height:28px; border-radius:50%;
+  border:2px solid rgba(168,85,247,0.2);
+  display:flex; align-items:center; justify-content:center;
+  font-size:10px; font-weight:bold; color:rgba(168,85,247,0.35);
+  transition:all 0.3s; flex-shrink:0;
+}
+.pass-dot.done  { background:rgba(168,85,247,0.15); border-color:#a855f7; color:#a855f7; box-shadow:0 0 10px rgba(168,85,247,0.4); }
+.pass-dot.active { background:rgba(255,230,0,0.15); border-color:#ffe600; color:#ffe600; box-shadow:0 0 12px rgba(255,230,0,0.5); animation:pulseDot 0.6s ease-in-out infinite; }
+@keyframes pulseDot { 0%,100%{transform:scale(1)} 50%{transform:scale(1.15)} }
+.pass-connector { width:14px; height:2px; background:rgba(168,85,247,0.12); border-radius:1px; flex-shrink:0; }
+.pass-connector.done { background:rgba(168,85,247,0.5); }
+.pass-info { text-align:center; margin-top:12px; font-size:12px; color:rgba(168,85,247,0.55); letter-spacing:0.05em; }
+
+/* ── DONE BANNER ── */
+.done-banner {
+  text-align:center; padding:12px; margin-bottom:18px;
+  background:linear-gradient(90deg,rgba(168,85,247,0.1),rgba(124,58,237,0.1));
+  border:1px solid rgba(168,85,247,0.3); border-radius:14px;
+  color:#a855f7; font-weight:bold; font-size:16px; letter-spacing:0.08em;
+  display:none;
+}
+.done-banner.show { display:block; animation:fadeUp 0.4s ease; }
+
+/* ── THREAD SECTION ── */
+.thread-section {
+  background:#150d24; border:1px solid rgba(124,58,237,0.3); border-radius:22px;
+  padding:20px; margin-bottom:18px; animation:fadeUp 0.5s ease 0.4s both;
+  transition:border-color 0.3s;
+}
+.thread-section:hover { border-color:rgba(168,85,247,0.5); }
+.thread-section-title { text-align:center; color:#a855f7; margin-bottom:16px; font-size:17px; text-shadow:0 0 8px rgba(168,85,247,0.5); }
+
+.thread-grid {
+  display:grid; grid-template-columns:repeat(auto-fill, minmax(220px,1fr)); gap:10px;
+  max-height:300px; overflow-y:auto;
+  scrollbar-width:thin; scrollbar-color:rgba(168,85,247,0.3) transparent;
+}
+.thread-grid::-webkit-scrollbar { width:4px; }
+.thread-grid::-webkit-scrollbar-thumb { background:rgba(168,85,247,0.3); border-radius:2px; }
+
+.thread-card {
+  background:rgba(0,0,0,0.35); border-radius:14px;
+  border:1px solid rgba(255,255,255,0.07);
+  border-left:3px solid var(--tc);
+  padding:12px 14px; animation:cardIn 0.25s ease both;
+}
+@keyframes cardIn { from{opacity:0;transform:scale(0.94)} to{opacity:1;transform:scale(1)} }
+
+.tc-header { display:flex; align-items:center; justify-content:space-between; margin-bottom:8px; }
+.tc-badge {
+  display:inline-flex; align-items:center; gap:5px; padding:3px 10px;
+  border-radius:20px; font-size:11px; font-weight:bold;
+  background:color-mix(in srgb, var(--tc) 18%, transparent);
+  color:var(--tc); border:1px solid color-mix(in srgb, var(--tc) 45%, transparent);
+}
+.tc-dot { width:6px; height:6px; border-radius:50%; background:var(--tc); animation:blink 0.75s infinite; flex-shrink:0; }
+@keyframes blink { 0%,100%{opacity:1} 50%{opacity:0.15} }
+.tc-pct { font-size:13px; font-weight:bold; color:var(--tc); }
+
+.tc-seg { font-size:11px; color:rgba(220,200,255,0.65); margin-bottom:8px; }
+.tc-seg strong { color:rgba(220,200,255,0.9); }
+
+.tc-prog-bg { height:5px; background:rgba(255,255,255,0.07); border-radius:3px; overflow:hidden; margin-bottom:7px; }
+.tc-prog-fill { height:100%; background:var(--tc); border-radius:3px; transition:width 0.12s ease; box-shadow:0 0 8px var(--tc); }
+
+.tc-mini-bars { display:flex; align-items:flex-end; gap:1px; height:28px; }
+.tc-mini-bar { flex:1; min-width:0; border-radius:1px 1px 0 0; min-height:2px; background:var(--tc); opacity:0.55; transition:height 0.07s ease, opacity 0.07s; }
+.tc-mini-bar.active { opacity:1; filter:drop-shadow(0 0 3px var(--tc)); }
+
+.no-threads { font-size:13px; color:rgba(168,85,247,0.4); text-align:center; padding:24px 0; letter-spacing:0.06em; }
+
+/* ── COMPLEXITY ── */
+.complexity-section {
+  background:#1a0f2e; border-radius:22px; padding:22px 20px;
+  border:1px solid rgba(168,85,247,0.08); animation:fadeUp 0.5s ease 0.5s both;
+  transition:border-color 0.3s;
+}
+.complexity-section:hover { border-color:rgba(168,85,247,0.28); }
+.complexity-section h2 { text-align:center; color:#a855f7; margin-bottom:16px; font-size:20px; text-shadow:0 0 8px rgba(168,85,247,0.5); }
+
+.complexity-cards { display:grid; grid-template-columns:repeat(auto-fit,minmax(160px,1fr)); gap:12px; margin-bottom:18px; }
+.cx-card {
+  background:rgba(168,85,247,0.04); border:1px solid rgba(168,85,247,0.12);
+  border-radius:14px; padding:14px 16px; text-align:center;
+  transition:transform 0.25s, box-shadow 0.25s;
+}
+.cx-card:hover { transform:translateY(-4px); box-shadow:0 8px 24px rgba(0,0,0,0.4), 0 0 14px rgba(168,85,247,0.08); }
+.cx-case { font-size:10px; color:rgba(168,85,247,0.55); text-transform:uppercase; letter-spacing:1px; margin-bottom:6px; }
+.cx-val  { font-size:20px; font-weight:bold; margin-bottom:4px; }
+.cx-desc { font-size:11px; color:rgba(255,255,255,0.45); line-height:1.4; }
+.cx-best  { color:#c084fc; }
+.cx-avg   { color:#a855f7; }
+.cx-worst { color:#ff8080; }
+.cx-space { color:#38bdf8; }
+
+.cx-notes {
+  background:rgba(168,85,247,0.03); border:1px solid rgba(168,85,247,0.08);
+  border-radius:12px; padding:14px 16px;
+}
+.cx-notes p { font-size:12px; color:rgba(220,200,255,0.6); line-height:1.7; }
+.cx-notes strong { color:#a855f7; }
+
+::-webkit-scrollbar { width:6px; height:6px; }
+::-webkit-scrollbar-track { background:#0f0520; }
+::-webkit-scrollbar-thumb { background:#7c3aed; border-radius:3px; }
+</style>
+</head>
+<body>
+
+<h1 data-text="Parallel Merge Sort">Parallel Merge Sort</h1>
+
+<!-- CONTROLS -->
+<div class="controls">
+  <button id="btn-start" onclick="handleStart()"><span class="lbl">Start</span></button>
+  <button id="btn-pause" onclick="handlePause()" disabled><span class="lbl">Pause</span></button>
+  <button onclick="handleReset()"><span class="lbl">Reset</span></button>
+
+  <div class="ctrl-group">
+    <label>SIZE</label>
+    <select id="sel-size" onchange="changeSize(+this.value)">
+      <option value="20">20</option>
+      <option value="30">30</option>
+      <option value="50" selected>50</option>
+      <option value="70">70</option>
+    </select>
+  </div>
+
+  <div class="ctrl-group">
+    <label>THREADS</label>
+    <select id="sel-threads" onchange="maxThreads=+this.value">
+      <option value="2">2</option>
+      <option value="4">4</option>
+      <option value="6">6</option>
+      <option value="8" selected>8</option>
+    </select>
+  </div>
+
+  <div class="ctrl-group">
+    <label>SPEED</label>
+    <input type="range" id="spd" min="1" max="5" value="3" step="1" oninput="setSpeed(+this.value)">
+    <span id="spd-lbl" style="color:#a855f7;font-weight:bold;font-size:13px;min-width:22px">3x</span>
+  </div>
+</div>
+
+<!-- STATS -->
+<div class="stats-row">
+  <div class="stat-box" style="--ac:#7c3aed"> <div class="stat-label">Array Size</div>     <div class="stat-value" id="st-size">50</div></div>
+  <div class="stat-box" style="--ac:#c084fc"> <div class="stat-label">Sorted</div>         <div class="stat-value" id="st-sorted">0</div></div>
+  <div class="stat-box" style="--ac:#ffd740"> <div class="stat-label">Active Threads</div> <div class="stat-value" id="st-threads">0</div></div>
+  <div class="stat-box" style="--ac:#a855f7"> <div class="stat-label">Comparisons</div>   <div class="stat-value" id="st-comps">0</div></div>
+  <div class="stat-box" style="--ac:#ff9100"> <div class="stat-label">Merges</div>          <div class="stat-value" id="st-merges">0</div></div>
+  <div class="stat-box" style="--ac:#ff4081"> <div class="stat-label">Status</div>         <div class="stat-value" id="st-status" style="font-size:1rem;padding-top:5px">READY</div></div>
+</div>
+
+<!-- BAR PANELS -->
+<div class="main-panels">
+  <div class="panel">
+    <div class="panel-title">Merge Sort in Progress</div>
+    <div class="bars" id="sort-bars"></div>
+    <div class="legend">
+      <div class="legend-item"><div class="legend-box" style="background:linear-gradient(#7c3aed,#2e1065)"></div>Unsorted</div>
+      <div class="legend-item"><div class="legend-box" style="background:linear-gradient(#ffe600,#cc7000)"></div>Comparing</div>
+      <div class="legend-item"><div class="legend-box" style="background:linear-gradient(#38bdf8,#0c4a6e)"></div>Merging</div>
+      <div class="legend-item"><div class="legend-box" style="background:linear-gradient(#c084fc,#2e1065)"></div>Sorted</div>
+    </div>
+  </div>
+  <div class="panel">
+    <div class="panel-title">Original Array</div>
+    <div class="bars" id="orig-bars"></div>
+    <div class="legend">
+      <div class="legend-item"><div class="legend-box" style="background:linear-gradient(#c084fc,#581c87)"></div>Original values (unsorted)</div>
+    </div>
+  </div>
+</div>
+
+<!-- DONE BANNER -->
+<div class="done-banner" id="done-banner">ARRAY FULLY SORTED - All subarrays merged successfully</div>
+
+<!-- PASS TRACKER -->
+<div class="pass-section">
+  <div class="pass-section-title">Merge Level Progress</div>
+  <div class="pass-track" id="pass-track"></div>
+  <div class="pass-info" id="pass-info">Levels will appear here when sorting begins.</div>
+</div>
+
+<!-- THREAD ACTIVITY -->
+<div class="thread-section">
+  <div class="thread-section-title">Live Thread Activity</div>
+  <div class="thread-grid" id="thread-grid">
+    <div class="no-threads">No threads active - press Start to begin.</div>
+  </div>
+</div>
+
+<!-- COMPLEXITY -->
+<div class="complexity-section">
+  <h2>Merge Sort - Time and Space Complexity</h2>
+  <div class="complexity-cards">
+    <div class="cx-card">
+      <div class="cx-case">Best Case</div>
+      <div class="cx-val cx-best">O(n log n)</div>
+      <div class="cx-desc">Consistent performance regardless of input order</div>
+    </div>
+    <div class="cx-card">
+      <div class="cx-case">Average Case</div>
+      <div class="cx-val cx-avg">O(n log n)</div>
+      <div class="cx-desc">Always divides in half, merges linearly</div>
+    </div>
+    <div class="cx-card">
+      <div class="cx-case">Worst Case</div>
+      <div class="cx-val cx-worst">O(n log n)</div>
+      <div class="cx-desc">Guaranteed performance even for adversarial input</div>
+    </div>
+    <div class="cx-card">
+      <div class="cx-case">Parallel</div>
+      <div class="cx-val" style="color:#38bdf8">O(n) with O(log n) depth</div>
+      <div class="cx-desc">log n levels, each level parallelizable</div>
+    </div>
+    <div class="cx-card">
+      <div class="cx-case">Space</div>
+      <div class="cx-val cx-space">O(n)</div>
+      <div class="cx-desc">Requires auxiliary array for merging</div>
+    </div>
+  </div>
+  <div class="cx-notes">
+    <p>
+      <strong>How it works:</strong> Merge Sort recursively divides the array into halves until each subarray has one element.
+      Then it <strong>merges</strong> adjacent sorted subarrays by comparing their elements and combining them in order.
+      The <strong>parallel version</strong> exploits the fact that independent subarrays at the same recursion level can be
+      <strong>merged simultaneously</strong> by different threads.
+      With p processors, each level takes O(n/p) time, giving O(n log n / p) total parallel time.
+      Merge Sort is <strong>stable</strong> (preserves relative order of equal elements) and has <strong>predictable performance</strong>.
+    </p>
+  </div>
+</div>
+
+<script>
+const TC     = ['#c084fc','#60a5fa','#fb923c','#e879f9','#fde047','#f472b6','#34d399','#22d3ee'];
+const TC_CLS = ['bar-t0','bar-t1','bar-t2','bar-t3','bar-t4','bar-t5','bar-t6','bar-t7'];
+
+let N = 50, maxThreads = 8;
+let arr = [], origArr = [];
+let statuses = [], threadAssign = [];
+let running = false, paused = false, done = false;
+let speedMs = 80;
+let comparisons = 0, merges = 0;
+let activeThreads = {};
+let stepQueue = [], stepIdx = 0;
+let rafId = null, lastTime = 0;
+
+const speedMap = {1:280, 2:140, 3:80, 4:30, 5:8};
+
+function genArray() {
+  done = false;
+  arr = Array.from({length:N}, (_,i) => Math.round(4 + (i/(N-1))*95));
+  for(let i=arr.length-1;i>0;i--){const j=Math.floor(Math.random()*(i+1));[arr[i],arr[j]]=[arr[j],arr[i]];}
+  origArr = arr.slice();
+  statuses = new Array(N).fill('default');
+  threadAssign = new Array(N).fill(-1);
+  comparisons = 0; merges = 0; activeThreads = {};
+  renderOrigBars(); renderSortBars(); updateStats(); renderThreadGrid();
+  document.getElementById('done-banner').classList.remove('show');
+  document.getElementById('pass-track').innerHTML = '';
+  document.getElementById('pass-info').textContent = 'Levels will appear here when sorting begins.';
+}
+
+function changeSize(v){ N=v; if(!running) genArray(); }
+function setSpeed(v){ speedMs=speedMap[v]||80; document.getElementById('spd-lbl').textContent=v+'x'; }
+
+// Bottom-up merge sort steps
+function buildSteps() {
+  stepQueue = [];
+  const a  = arr.slice();
+  const st = new Array(N).fill('default');
+  const th = new Array(N).fill(-1);
+  let tc = 0, mc = 0, tId = 0, cIdx = 0;
+  let levelData = [];
+  let levelIdx = 0;
+
+  function snap(type, data, level) {
+    stepQueue.push({ type, data, arr:a.slice(), st:st.slice(), th:th.slice(),
+      tc, mc, level, levelData:levelData.slice() });
+  }
+
+  for(let size = 1; size < N; size *= 2) {
+    levelData.push({ idx:levelIdx, size:size*2, mergeCount:0 });
+    const mergeOps = [];
+    
+    for(let left = 0; left < N; left += 2*size) {
+      const mid = Math.min(left + size, N);
+      const right = Math.min(left + 2*size, N);
+      if(mid < right) {
+        mergeOps.push({left, mid, right});
+      }
+    }
+
+    for(let b = 0; b < mergeOps.length; b += maxThreads) {
+      const batch = mergeOps.slice(b, b + maxThreads);
+      const tIds  = batch.map(() => tId++);
+      const cIdxs = batch.map(() => cIdx++ % TC.length);
+
+      batch.forEach(({left, mid, right}, k) => {
+        for(let i = left; i < right; i++) { th[i] = tIds[k]; st[i] = 'compare'; }
+      });
+      snap('newthreads', { threads: batch.map(({left, mid, right}, k) => ({lo:left, hi:right-1, mid, tid:tIds[k], ci:cIdxs[k]})) }, levelIdx);
+
+      batch.forEach(({left, mid, right}, k) => {
+        const temp = [];
+        let i = left, j = mid;
+        
+        while(i < mid && j < right) {
+          tc++;
+          if(a[i] <= a[j]) {
+            temp.push(a[i++]);
+          } else {
+            temp.push(a[j++]);
+          }
+        }
+        while(i < mid) temp.push(a[i++]);
+        while(j < right) temp.push(a[j++]);
+
+        for(let x = 0; x < temp.length; x++) {
+          a[left + x] = temp[x];
+          st[left + x] = 'merge';
+        }
+        mc++;
+        levelData[levelData.length-1].mergeCount++;
+        snap('merge', {left, right, tid:tIds[k], ci:cIdxs[k]}, levelIdx);
+
+        for(let x = left; x < right; x++) st[x] = 'thread';
+      });
+
+      batch.forEach(({left, right}, k) => {
+        for(let i = left; i < right; i++) { th[i] = -1; st[i] = 'default'; }
+      });
+      snap('tdone', { tIds }, levelIdx);
+    }
+    levelIdx++;
+  }
+
+  for(let x = 0; x < N; x++) st[x] = 'sorted';
+  snap('alldone', {}, -1);
+}
+
+function applyStep(s) {
+  arr=s.arr.slice(); statuses=s.st.slice(); threadAssign=s.th.slice();
+  comparisons=s.tc; merges=s.mc;
+
+  if(s.type === 'newthreads') {
+    s.data.threads.forEach(({lo,hi,mid,tid,ci}) => {
+      activeThreads[tid] = {lo, hi, mid, ci, progress:0, phase:'merging', segVals:[], segSt:[]};
+    });
+  }
+  if(s.type === 'tdone') s.data.tIds.forEach(tid => { delete activeThreads[tid]; });
+  if(s.type === 'alldone') done = true;
+
+  Object.keys(activeThreads).forEach(tid => {
+    const t = activeThreads[tid];
+    t.segVals = arr.slice(t.lo, t.hi+1);
+    t.segSt   = statuses.slice(t.lo, t.hi+1);
+    const isMerge = t.segSt.some(x => x === 'merge');
+    t.phase    = isMerge ? 'merging' : 'comparing';
+    t.progress = t.segSt.filter(x => x === 'sorted' || x === 'merge').length / (t.hi-t.lo+1) * 100;
+  });
+
+  if(s.levelData) renderPassTrack(s.levelData, s.level);
+}
+
+function renderPassTrack(levelData, curLevel) {
+  const track = document.getElementById('pass-track');
+  const info  = document.getElementById('pass-info');
+  if(!levelData || !levelData.length){ track.innerHTML=''; return; }
+  let h = '';
+  levelData.forEach((lvl, idx) => {
+    const isDone = lvl.idx < curLevel;
+    const isAct  = lvl.idx === curLevel;
+    const cls    = isDone ? 'done' : isAct ? 'active' : '';
+    h += `<div class="pass-dot ${cls}" title="Level ${lvl.idx+1} (size ${lvl.size}): ${lvl.mergeCount} merges">${lvl.idx+1}</div>`;
+    if(idx < levelData.length-1) h += `<div class="pass-connector${isDone?' done':''}"></div>`;
+  });
+  track.innerHTML = h;
+  const cur = levelData[curLevel];
+  if(cur) info.textContent = `Level ${curLevel+1} of ${levelData.length} - Subarray size ${cur.size} - ${cur.mergeCount} merges`;
+}
+
+function barClass(i) {
+  const s = statuses[i];
+  if(s === 'sorted')  return 'bar-sorted';
+  if(s === 'compare') return 'bar-compare';
+  if(s === 'merge')   return 'bar-merge';
+  if(s === 'thread') {
+    const tid = threadAssign[i];
+    if(tid >= 0 && activeThreads[tid]) return TC_CLS[activeThreads[tid].ci % TC_CLS.length];
+  }
+  return '';
+}
+
+function renderSortBars() {
+  const c   = document.getElementById('sort-bars');
+  const max = Math.max(...arr, 1);
+  let h = '';
+  for(let i = 0; i < arr.length; i++){
+    const pct = Math.max(1, Math.round((arr[i]/max)*100));
+    h += `<div class="bar-wrap"><div class="bar-num">${arr[i]}</div><div class="bar ${barClass(i)}" style="height:${pct}%"></div></div>`;
+  }
+  c.innerHTML = h;
+}
+
+function renderOrigBars() {
+  const c   = document.getElementById('orig-bars');
+  const max = Math.max(...origArr, 1);
+  let h = '';
+  for(let i = 0; i < origArr.length; i++){
+    const pct = Math.max(1, Math.round((origArr[i]/max)*100));
+    h += `<div class="bar-wrap"><div class="bar-num">${origArr[i]}</div><div class="bar" style="height:${pct}%;background:linear-gradient(180deg,#c084fc,#581c87);filter:drop-shadow(0 0 2px rgba(192,132,252,0.4))"></div></div>`;
+  }
+  c.innerHTML = h;
+}
+
+function renderThreadGrid() {
+  const g    = document.getElementById('thread-grid');
+  const keys = Object.keys(activeThreads);
+  if(!keys.length){
+    g.innerHTML = '<div class="no-threads">No threads active - press Start to begin.</div>';
+    document.getElementById('st-threads').textContent = '0';
+    return;
+  }
+  document.getElementById('st-threads').textContent = keys.length;
+  let h = '';
+  keys.forEach(tid => {
+    const t   = activeThreads[tid];
+    const col = TC[t.ci % TC.length];
+    const segLen = t.hi - t.lo + 1;
+    let miniH = '';
+    if(t.segVals && t.segVals.length){
+      const mx = Math.max(...t.segVals, 1);
+      t.segVals.forEach((v,k) => {
+        const ph    = Math.max(8, Math.round((v/mx)*100));
+        const isAct = t.segSt && (t.segSt[k]==='compare' || t.segSt[k]==='merge');
+        miniH += `<div class="tc-mini-bar${isAct?' active':''}" style="height:${ph}%"></div>`;
+      });
+    }
+    const phaseTxt = t.progress===100 ? 'done' : t.phase;
+    h += `<div class="thread-card" style="--tc:${col}">
+      <div class="tc-header">
+        <div class="tc-badge"><div class="tc-dot"></div>Thread ${tid}</div>
+        <div class="tc-pct">${Math.round(t.progress)}%</div>
+      </div>
+      <div class="tc-seg">
+        <strong>Range [${t.lo}, ${t.hi}]</strong> - ${segLen} elements -
+        <span style="color:${col};opacity:0.85">${phaseTxt}</span>
+      </div>
+      <div class="tc-prog-bg"><div class="tc-prog-fill" style="width:${t.progress}%"></div></div>
+      <div class="tc-mini-bars">${miniH}</div>
+    </div>`;
+  });
+  g.innerHTML = h;
+}
+
+function updateStats() {
+  document.getElementById('st-size').textContent   = N;
+  document.getElementById('st-sorted').textContent = statuses.filter(s => s==='sorted').length;
+  document.getElementById('st-comps').textContent  = comparisons;
+  document.getElementById('st-merges').textContent = merges;
+}
+
+function animate(ts) {
+  if(!running || paused) return;
+  if(ts - lastTime >= speedMs){
+    lastTime = ts;
+    if(stepIdx < stepQueue.length){
+      applyStep(stepQueue[stepIdx++]);
+      renderSortBars(); renderThreadGrid(); updateStats();
+      if(done){ finishSort(); return; }
+    } else { finishSort(); return; }
+  }
+  rafId = requestAnimationFrame(animate);
+}
+
+function finishSort() {
+  running = false;
+  statuses = new Array(N).fill('sorted');
+  activeThreads = {};
+  renderSortBars(); renderThreadGrid(); updateStats();
+  document.getElementById('st-status').textContent = 'DONE';
+  document.getElementById('st-status').style.color = '#c084fc';
+  document.getElementById('done-banner').classList.add('show');
+  document.getElementById('btn-start').disabled = true;
+  document.getElementById('btn-pause').disabled = true;
+  document.getElementById('st-threads').textContent = '0';
+}
+
+function handleStart() {
+  if(done || running) return;
+  buildSteps(); stepIdx = 0;
+  running = true; paused = false;
+  document.getElementById('btn-start').disabled = true;
+  document.getElementById('btn-pause').disabled = false;
+  document.getElementById('st-status').textContent = 'RUNNING';
+  document.getElementById('st-status').style.color = '#ffd740';
+  lastTime = 0; rafId = requestAnimationFrame(animate);
+}
+
+function handlePause() {
+  if(!running) return;
+  if(!paused){
+    paused = true; cancelAnimationFrame(rafId);
+    document.getElementById('btn-pause').querySelector('.lbl').textContent = 'Resume';
+    document.getElementById('st-status').textContent = 'PAUSED';
+    document.getElementById('st-status').style.color = 'rgba(168,85,247,0.5)';
+  } else {
+    paused = false;
+    document.getElementById('btn-pause').querySelector('.lbl').textContent = 'Pause';
+    document.getElementById('st-status').textContent = 'RUNNING';
+    document.getElementById('st-status').style.color = '#ffd740';
+    lastTime = 0; rafId = requestAnimationFrame(animate);
+  }
+}
+
+function handleReset() {
+  running = false; paused = false; done = false;
+  cancelAnimationFrame(rafId);
+  activeThreads = {}; stepQueue = []; stepIdx = 0;
+  genArray();
+  document.getElementById('btn-start').disabled = false;
+  document.getElementById('btn-start').querySelector('.lbl').textContent = 'Start';
+  document.getElementById('btn-pause').disabled = true;
+  document.getElementById('btn-pause').querySelector('.lbl').textContent = 'Pause';
+  document.getElementById('st-status').textContent = 'READY';
+  document.getElementById('st-status').style.color = '#7c3aed';
+}
+
+genArray();
+</script>
+</body>
+</html>
